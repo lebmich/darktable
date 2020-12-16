@@ -27,6 +27,87 @@ you are strongly advised to take a backup first.
 
 ## The Big Ones
 
+- The user manual is made available at the same time as the
+  release. Note that this user manual is also the last version as a
+  new project has taken over the lead on this. The goal is to have
+  an up-to-date user manual by using a simpler format
+  to write text for contributors. Feedback or contributions for the
+  new format are welcome at https://github.com/darktable-org/dtdocs.
+
+  Current manual (multilingual):
+
+  https://darktable.gitlab.io/doc/
+
+  New manual (English only):
+
+  https://darktable-org.github.io/dtdocs/
+
+- The tethering view has been reworked and is now more stable.
+
+- The histogram is back on the tethering view (it was disabled in 3.2
+  due to lack of time)
+
+- A new module grouping feature has been introduced. This makes the "more modules" module
+  (at the bottom right of the darkroom) obsolete and this module has therefore been removed.
+
+  The module grouping feature allows users to create their own groups
+  of modules. A number of pre-defined module groups are included as presets
+  (default, minimal, scene-referred, display-referred,
+  all modules) as well as a new default module group tab layout (technical / grading / effects),
+  which beter organizes the modules according to their purpose.
+
+- Module masking is now enhanced for use with scene-referred workflows. A new masking implementation
+  has been added, with fully unbounded blending modes, which allows parametric masking
+  either in linear RGB or in JzCzHz color spaces. A boost factor slider has been
+  introduced in the masking GUI so that users may set thresholding parameters above 100%
+  to mask pixels in HDR images.
+
+  JzCzHz is derived from JzAzBz, which is a perceptual color space developed
+  for HDR and published in 2017, with better properties than CIE Lab from 1976,
+  allowing near-perfect hue linearity, for a robust hue/saturation masking.
+  A JzCzHz hue mask will produce the same output whether it is used
+  before input color profile, after output color profile, or anywhere in-between,
+  providing an important consistency improvement over HSL masking.
+
+- A new color calibration module has been added as a full-featured hub for color correction.
+  It was first intended as a scene-referred (unbounded) rewrite of the old channel mixer,
+  allowing corrections of the color space, both for creative and corrective purposes.
+
+  Because channel mixing is how white balancing and chromatic adaptation
+  are implemented, color calibration also introduces robust chromatic adaptation transforms,
+  Bradford (from ICC v4) and CAT16 (from CIECAM 2016), improving the color rendition
+  of the white-balanced final image. The module provides a library of all standard
+  CIE illuminants and two machine-learning illuminant detection algorithms, using
+  different assumptions, for when no neutral colors can be sampled from the image,
+  along with the traditional color-picker for manual sampling of neutral colors.
+
+  Color calibration internally implements gamut-mapping and gamut-clipping,
+  which attempts to preserve the hue and luminance of pixels while avoiding imaginary and
+  out-of-gamut colors at the beginning of the pipeline, to improve the robustness of
+  color-grading modules inside the pipeline. This is made necessary because
+  white balancing will only push input out-of-gamut colors farther away,
+  and will noticeably help dealing with artifical colored lights (LED, stage lighting, etc.).
+
+  A new workflow setting "chromatic adaptation defaults", in processing preferences,
+  allows users to choose to keep using the white balance module
+  to perform the chromatic adaptation for new edits ("legacy" worflow, the default)
+  or to use the new color calibration instead ("modern" workflow).
+  The modern workflow still uses the usual white balance module, although
+  with different default settings, because input color profiles and
+  demosaicing need at least a rough white balancing early in the pipe.
+
+- Map view has evolved. Images close to each other are now grouped and a count of
+  grouped images is displayed on the bottom-left corner. This provides better performance
+  when many images need to be shown on the map. Mouse-scrolling over a group's thumb scrolls through
+  the images of the group. Groups containing selected images are highlighted with a white border.
+  The image count is displayed as a white number if all images of the group are exactly at the
+  same place, and in yellow otherwise.
+
+  Movement of images within the map has also been improved. <kbd>Click</kbd> to drag the visible image,
+  <kbd>Shift-Click</kbd> to drag the full group. A new "locations" module allows you to define location
+  areas (using elliptical or rectangular shapes). These locations are saved as collections visible under "
+  geotagging" in the collect module.
+
 ## New Features And Changes
 
 ## Bug fixes
@@ -50,18 +131,17 @@ you are strongly advised to take a backup first.
 
 ## Translations
 
-- Catalan
+- Afrikaans
 - Czech
-- Danish
 - German
 - European Spanish
+- Finnish
 - French
 - Hebrew
 - Hungarian
 - Italian
-- Japanese
-- Norwegian Bokmål
-- Dutch
 - Polish
+- Brazilian Portuguese
 - Russian
+- Slovak
 - Slovenian
