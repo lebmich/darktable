@@ -110,6 +110,9 @@ you are strongly advised to take a backup first.
 
 ## New Features And Changes
 
+- Many optimizations in different part of the code (soften, tone equalizer,
+  circle masks, color picker).
+
 ## Bug fixes
 
 ## Notes

@@ -894,19 +894,8 @@ static void build_round_stamp(float complex **pstamp,
     (strength * STAMP_RELOCATION) : strength;
   const float abs_strength = cabs(strength);
 
-  float complex *restrict stamp = malloc(sizeof(float complex)
-                                         * stamp_extent->width * stamp_extent->height);
-
-  // clear memory
-  #ifdef _OPENMP
-  #pragma omp parallel for schedule (static) default (shared)
-  #endif
-
-  for(int i = 0; i < stamp_extent->height; i++)
-  {
-    float complex *row = stamp + i * stamp_extent->width;
-    memset(row, 0, sizeof(float complex) * stamp_extent->width);
-  }
+  float complex *restrict stamp =
+    calloc(sizeof(float complex), stamp_extent->width * stamp_extent->height);
 
   // lookup table: map of distance from center point => warp
   const int table_size = iradius * LOOKUP_OVERSAMPLE;
@@ -919,7 +908,8 @@ static void build_round_stamp(float complex **pstamp,
   // circle in quadrants and doing only the inside we have to calculate
   // hypotf only for PI / 16 = 0.196 of the stamp area.
   // We don't do octants to avoid false sharing of cache lines between threads.
-  #ifdef _OPENMP
+  // doesn't work for OSX see issue #7349
+  #if defined(_OPENMP) && !defined(__APPLE__)
   #pragma omp parallel for schedule(static) default(none) \
     dt_omp_firstprivate(iradius, strength, abs_strength, table_size)   \
     dt_omp_sharedconst(center, warp, stamp_extent, lookup_table, LOOKUP_OVERSAMPLE)
