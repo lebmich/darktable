@@ -509,9 +509,9 @@ static int _thumbs_load_needed(dt_thumbtable_t *table)
     {
       if(posy < table->view_height) // we don't load invisible thumbs
       {
-        dt_thumbnail_t *thumb
-            = dt_thumbnail_new(table->thumb_size, table->thumb_size, sqlite3_column_int(stmt, 1),
-                               sqlite3_column_int(stmt, 0), table->overlays, FALSE, table->show_tooltips);
+        dt_thumbnail_t *thumb = dt_thumbnail_new(table->thumb_size, table->thumb_size, sqlite3_column_int(stmt, 1),
+                                                 sqlite3_column_int(stmt, 0), table->overlays,
+                                                 DT_THUMBNAIL_CONTAINER_LIGHTTABLE, table->show_tooltips);
         if(table->mode == DT_THUMBTABLE_MODE_FILMSTRIP)
         {
           thumb->single_click = TRUE;
@@ -554,9 +554,9 @@ static int _thumbs_load_needed(dt_thumbtable_t *table)
     {
       if(posy + table->thumb_size >= 0) // we don't load invisible thumbs
       {
-        dt_thumbnail_t *thumb
-            = dt_thumbnail_new(table->thumb_size, table->thumb_size, sqlite3_column_int(stmt, 1),
-                               sqlite3_column_int(stmt, 0), table->overlays, FALSE, table->show_tooltips);
+        dt_thumbnail_t *thumb = dt_thumbnail_new(table->thumb_size, table->thumb_size, sqlite3_column_int(stmt, 1),
+                                                 sqlite3_column_int(stmt, 0), table->overlays,
+                                                 DT_THUMBNAIL_CONTAINER_LIGHTTABLE, table->show_tooltips);
         if(table->mode == DT_THUMBTABLE_MODE_FILMSTRIP)
         {
           thumb->single_click = TRUE;
@@ -1346,7 +1346,53 @@ static void _dt_collection_changed_callback(gpointer instance, dt_collection_cha
     }
 
     // get the new rowid of the new offset image
-    const int nrow = _thumb_get_rowid(newid);
+    int nrow = _thumb_get_rowid(newid);
+
+    // if we don't have a valid rowid that means the image with newid doesn't exist in the new
+    // memory.collected_images as we still have the "old" list of images available in table->list, let's found the
+    // next valid image inside
+    if(nrow <= 0)
+    {
+      l = table->list;
+      gboolean after = FALSE;
+      while(l)
+      {
+        dt_thumbnail_t *thumb = (dt_thumbnail_t *)l->data;
+        if(after)
+        {
+          nrow = _thumb_get_rowid(thumb->imgid);
+          if(nrow > 0)
+          {
+            newid = thumb->imgid;
+            break;
+          }
+        }
+        if(thumb->imgid == newid) after = TRUE;
+        l = g_list_next(l);
+      }
+    }
+    // last chance if still not valid, we search the first previous valid image
+    if(nrow <= 0)
+    {
+      l = g_list_last(table->list);
+      gboolean before = FALSE;
+      while(l)
+      {
+        dt_thumbnail_t *thumb = (dt_thumbnail_t *)l->data;
+        if(before)
+        {
+          nrow = _thumb_get_rowid(thumb->imgid);
+          if(nrow > 0)
+          {
+            newid = thumb->imgid;
+            break;
+          }
+        }
+        if(thumb->imgid == newid) before = TRUE;
+        l = g_list_previous(l);
+      }
+    }
+
     const gboolean offset_changed = (MAX(1, nrow) != table->offset);
     if(nrow >= 1)
       table->offset_imgid = newid;
@@ -1359,7 +1405,8 @@ static void _dt_collection_changed_callback(gpointer instance, dt_collection_cha
 
     dt_thumbtable_full_redraw(table, TRUE);
 
-    if(offset_changed) dt_view_lighttable_change_offset(darktable.view_manager, FALSE, newid);
+    if(offset_changed)
+      dt_view_lighttable_change_offset(darktable.view_manager, FALSE, table->offset_imgid);
     else
     {
       // if we are in culling or preview mode, ensure to refresh active images
@@ -1422,7 +1469,7 @@ static void _event_dnd_get(GtkWidget *widget, GdkDragContext *context, GtkSelect
       const int imgs_nb = g_list_length(table->drag_list);
       if(imgs_nb)
       {
-        uint32_t *imgs = malloc(imgs_nb * sizeof(uint32_t));
+        uint32_t *imgs = malloc(sizeof(uint32_t) * imgs_nb);
         GList *l = table->drag_list;
         for(int i = 0; i < imgs_nb; i++)
         {
@@ -1817,7 +1864,7 @@ void dt_thumbtable_full_redraw(dt_thumbtable_t *table, gboolean force)
       {
         // we create a completly new thumb
         dt_thumbnail_t *thumb = dt_thumbnail_new(table->thumb_size, table->thumb_size, nid, nrow, table->overlays,
-                                                 FALSE, table->show_tooltips);
+                                                 DT_THUMBNAIL_CONTAINER_LIGHTTABLE, table->show_tooltips);
         if(table->mode == DT_THUMBTABLE_MODE_FILMSTRIP)
         {
           thumb->single_click = TRUE;

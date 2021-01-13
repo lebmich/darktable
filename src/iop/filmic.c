@@ -402,7 +402,7 @@ void process(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *c
   dt_omp_firstprivate(ch, data, desaturate, ivoid, ovoid, preserve_color, roi_out, saturation, EPS) \
   schedule(static)
 #endif
-  for(size_t k = 0; k < roi_out->height * roi_out->width * ch; k += ch)
+  for(size_t k = 0; k < (size_t)roi_out->height * roi_out->width * ch; k += ch)
   {
     float *in = ((float *)ivoid) + k;
     float *out = ((float *)ovoid) + k;
@@ -532,7 +532,7 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
                       zero, eps) \
   schedule(static)
 #endif
-  for(size_t k = 0; k < roi_out->height * roi_out->width * ch; k += ch)
+  for(size_t k = 0; k < (size_t)roi_out->height * roi_out->width * ch; k += ch)
   {
     float *in = ((float *)ivoid) + k;
     float *out = ((float *)ovoid) + k;
@@ -1533,7 +1533,7 @@ static gboolean dt_iop_tonecurve_draw(GtkWidget *widget, cairo_t *crf, gpointer 
      * Use double precision locally to avoid cancellation effect on
      * the "+ d" operation.
      */
-    const float x = (rescale) ? pow(2.0, (double)a * nodes_data->x[k] + b) + d : nodes_data->x[k];
+    const float x = (rescale) ? powf(2.0f, (double)a * nodes_data->x[k] + b) + d : nodes_data->x[k];
     const float y = powf(nodes_data->y[k], 1.0f / gamma);
 
     cairo_arc(cr, x * width, (1.0 - y) * (double)height, DT_PIXEL_APPLY_DPI(3), 0, 2. * M_PI);
@@ -1555,7 +1555,7 @@ static gboolean dt_iop_tonecurve_draw(GtkWidget *widget, cairo_t *crf, gpointer 
      * Use double precision locally to avoid cancellation effect on
      * the "+ d" operation.
      */
-    const float x = (rescale) ? pow(2.0, (double)a * k / 255.0 + b) + d : k / 255.0;
+    const float x = (rescale) ? powf(2.0f, (double)a * k / 255.0f + b) + d : k / 255.0f;
     const float y = powf(c->table[k], 1.0f / gamma);
     cairo_line_to(cr, x * width, (double)height * (1.0 - y));
   }

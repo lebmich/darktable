@@ -407,7 +407,7 @@ int main(int argc, char *arg[])
   }
 
   int m_argc = 0;
-  char **m_arg = malloc((5 + argc - k + 1) * sizeof(char *));
+  char **m_arg = malloc(sizeof(char *) * (5 + argc - k + 1));
   m_arg[m_argc++] = "darktable-cli";
   m_arg[m_argc++] = "--library";
   m_arg[m_argc++] = ":memory:";
@@ -535,12 +535,11 @@ int main(int argc, char *arg[])
     else
     {
       dt_film_t film;
-      int id = 0;
       int filmid = 0;
 
       gchar *directory = g_path_get_dirname(input);
       filmid = dt_film_new(&film, directory);
-      id = dt_image_import(filmid, input, TRUE);
+      const int32_t id = dt_image_import(filmid, input, TRUE);
       g_free(directory);
       if(!id)
       {

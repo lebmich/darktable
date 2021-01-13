@@ -934,6 +934,10 @@ int dt_view_get_image_to_act_on()
 dt_view_surface_value_t dt_view_image_get_surface(int imgid, int width, int height, cairo_surface_t **surface,
                                                   const gboolean quality)
 {
+  double tt = 0;
+  if((darktable.unmuted & (DT_DEBUG_LIGHTTABLE | DT_DEBUG_PERF)) == (DT_DEBUG_LIGHTTABLE | DT_DEBUG_PERF))
+    tt = dt_get_wtime();
+
   dt_view_surface_value_t ret = DT_VIEW_SURFACE_KO;
   // if surface not null, clean it up
   if(*surface && cairo_surface_get_reference_count(*surface) > 0) cairo_surface_destroy(*surface);
@@ -962,11 +966,9 @@ dt_view_surface_value_t dt_view_image_get_surface(int imgid, int width, int heig
   const int img_height = buf_ht * scale;
   *surface = cairo_image_surface_create(CAIRO_FORMAT_RGB24, img_width, img_height);
 
-  dt_print(DT_DEBUG_LIGHTTABLE, "[dt_view_image_get_surface]  id %i, dots %ix%i, mip %ix%i, surf %ix%i\n", imgid, width, height, buf_wd, buf_ht, img_width, img_height);
-
   // we transfer cached image on a cairo_surface (with colorspace transform if needed)
   cairo_surface_t *tmp_surface = NULL;
-  uint8_t *rgbbuf = (uint8_t *)calloc(buf_wd * buf_ht * 4, sizeof(uint8_t));
+  uint8_t *rgbbuf = (uint8_t *)calloc((size_t)buf_wd * buf_ht * 4, sizeof(uint8_t));
   if(rgbbuf)
   {
     gboolean have_lock = FALSE;
@@ -1078,6 +1080,19 @@ dt_view_surface_value_t dt_view_image_get_surface(int imgid, int width, int heig
 
   dt_mipmap_cache_release(darktable.mipmap_cache, &buf);
   if(rgbbuf) free(rgbbuf);
+
+  // logs
+  if((darktable.unmuted & (DT_DEBUG_LIGHTTABLE | DT_DEBUG_PERF)) == (DT_DEBUG_LIGHTTABLE | DT_DEBUG_PERF))
+  {
+    dt_print(DT_DEBUG_LIGHTTABLE | DT_DEBUG_PERF,
+             "[dt_view_image_get_surface]  id %i, dots %ix%i, mip %ix%i, surf %ix%i created in %0.04f sec\n",
+             imgid, width, height, buf_wd, buf_ht, img_width, img_height, dt_get_wtime() - tt);
+  }
+  else if(darktable.unmuted & DT_DEBUG_LIGHTTABLE)
+  {
+    dt_print(DT_DEBUG_LIGHTTABLE, "[dt_view_image_get_surface]  id %i, dots %ix%i, mip %ix%i, surf %ix%i\n", imgid,
+             width, height, buf_wd, buf_ht, img_width, img_height);
+  }
 
   // we consider skull as ok as the image hasn't to be reload
   return ret;
@@ -1565,7 +1580,7 @@ void dt_view_accels_refresh(dt_view_manager_t *vm)
   // go through all accels to populate categories with valid ones
   GList *blocs = NULL;
   GList *bl = NULL;
-  GSList *l = darktable.control->accelerator_list;
+  GList *l = darktable.control->accelerator_list;
   while(l)
   {
     dt_accel_t *da = (dt_accel_t *)l->data;
@@ -1622,7 +1637,7 @@ void dt_view_accels_refresh(dt_view_manager_t *vm)
         }
       }
     }
-    l = g_slist_next(l);
+    l = g_list_next(l);
   }
 
   // we add the mouse actions too

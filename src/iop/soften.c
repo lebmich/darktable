@@ -26,6 +26,7 @@
 #include "bauhaus/bauhaus.h"
 #include "common/box_filters.h"
 #include "common/colorspaces.h"
+#include "common/math.h"
 #include "common/opencl.h"
 #include "control/control.h"
 #include "develop/develop.h"
@@ -44,9 +45,6 @@
 #endif
 
 #define MAX_RADIUS 32
-
-#define CLIP(x) ((x < 0) ? 0.0 : (x > 1.0) ? 1.0 : x)
-#define MM_CLIP_PS(X) (_mm_min_ps(_mm_max_ps((X), _mm_setzero_ps()), _mm_set1_ps(1.0)))
 
 DT_MODULE_INTROSPECTION(1, dt_iop_soften_params_t)
 
@@ -114,7 +112,9 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
 {
   const dt_iop_soften_data_t *const d = (const dt_iop_soften_data_t *const)piece->data;
 
-  assert(piece->colors == 4);
+  if (!dt_iop_have_required_input_format(4 /*we need full-color pixels*/, self, piece->colors,
+                                         ivoid, ovoid, roi_in, roi_out))
+    return; // image has been copied through to output and module's trouble flag has been updated
 
   const float brightness = 1.0 / exp2f(-d->brightness);
   const float saturation = d->saturation / 100.0;
@@ -170,7 +170,9 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
                   void *const ovoid, const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
 {
   dt_iop_soften_data_t *const data = (dt_iop_soften_data_t *)piece->data;
-  assert(piece->colors == 4);
+  if (!dt_iop_have_required_input_format(4 /*we need full-color pixels*/, self, piece->colors,
+                                         ivoid, ovoid, roi_in, roi_out))
+    return; // image has been copied through to output and module's trouble flag has been updated
 
   const float brightness = 1.0 / exp2f(-data->brightness);
   const float saturation = data->saturation / 100.0;
@@ -246,7 +248,7 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
 
   /* sigma-radius correlation to match opencl vs. non-opencl. identified by numerical experiments but
    * unproven. ask me if you need details. ulrich */
-  const float sigma = sqrt((radius * (radius + 1) * BOX_ITERATIONS + 2) / 3.0f);
+  const float sigma = sqrtf((radius * (radius + 1) * BOX_ITERATIONS + 2) / 3.0f);
   const int wdh = ceilf(3.0f * sigma);
   const int wd = 2 * wdh + 1;
   const size_t mat_size = sizeof(float) * wd;
@@ -290,7 +292,7 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
   size_t sizes[3];
   size_t local[3];
 
-  dev_tmp = dt_opencl_alloc_device(devid, width, height, 4 * sizeof(float));
+  dev_tmp = dt_opencl_alloc_device(devid, width, height, sizeof(float) * 4);
   if(dev_tmp == NULL) goto error;
 
   dev_m = dt_opencl_copy_host_to_device_constant(devid, mat_size, mat);
@@ -393,10 +395,11 @@ void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t
 
   /* sigma-radius correlation to match opencl vs. non-opencl. identified by numerical experiments but
    * unproven. ask me if you need details. ulrich */
-  const float sigma = sqrt((radius * (radius + 1) * BOX_ITERATIONS + 2) / 3.0f);
+  const float sigma = sqrtf((radius * (radius + 1) * BOX_ITERATIONS + 2) / 3.0f);
   const int wdh = ceilf(3.0f * sigma);
 
-  tiling->factor = 3.0f; // in + out + tmp
+  tiling->factor = 2.1f; // in + out + small slice for box_mean
+  tiling->factor_cl = 3.0f; // in + out + tmp
   tiling->maxbuf = 1.0f;
   tiling->overhead = 0;
   tiling->overlap = wdh;

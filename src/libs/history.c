@@ -655,8 +655,9 @@ static void _pop_undo(gpointer user_data, dt_undo_type_t type, dt_undo_data_t da
       darktable.develop->gui_module->request_mask_display = hist->request_mask_display;
       dt_iop_gui_update_blendif(darktable.develop->gui_module);
       dt_iop_gui_blend_data_t *bd = (dt_iop_gui_blend_data_t *)(dev->gui_module->blend_data);
-      dtgtk_button_set_active(DTGTK_BUTTON(bd->showmask),
-                              hist->request_mask_display == DT_DEV_PIXELPIPE_DISPLAY_MASK);
+      if(bd)
+        dtgtk_button_set_active(DTGTK_BUTTON(bd->showmask),
+                                hist->request_mask_display == DT_DEV_PIXELPIPE_DISPLAY_MASK);
     }
   }
 }
@@ -942,7 +943,7 @@ static gboolean _changes_tooltip_callback(GtkWidget *widget, gint x, gint y, gbo
         const float oboost = exp2f(old_blend->blendif_boost_factors[ch]);
         const float nboost = exp2f(hitem->blend_params->blendif_boost_factors[ch]);
 
-        if((oactive || nactive) && (memcmp(of, nf, 4 * sizeof(float)) || opolarity != npolarity))
+        if((oactive || nactive) && (memcmp(of, nf, sizeof(float) * 4) || opolarity != npolarity))
         {
           if(first)
           {
@@ -1210,8 +1211,8 @@ static void _lib_history_button_clicked_callback(GtkWidget *widget, gpointer use
   /* signal history changed */
   dt_dev_undo_end_record(darktable.develop);
 
-  dt_dev_modulegroups_set(darktable.develop, dt_dev_modulegroups_get(darktable.develop));
   dt_iop_connect_accels_all();
+  dt_dev_modulegroups_set(darktable.develop, dt_dev_modulegroups_get(darktable.develop));
 }
 
 static void _lib_history_create_style_button_clicked_callback(GtkWidget *widget, gpointer user_data)

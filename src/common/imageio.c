@@ -91,7 +91,7 @@ int dt_imageio_large_thumbnail(const char *filename, uint8_t **buffer, int32_t *
     // Decompress the JPG into our own memory format
     dt_imageio_jpeg_t jpg;
     if(dt_imageio_jpeg_decompress_header(buf, bufsize, &jpg)) goto error;
-    *buffer = (uint8_t *)dt_alloc_align(64, (size_t)sizeof(uint8_t) * jpg.width * jpg.height * 4);
+    *buffer = (uint8_t *)dt_alloc_align(64, sizeof(uint8_t) * 4 * jpg.width * jpg.height);
     if(!*buffer) goto error;
 
     *width = jpg.width;
@@ -131,7 +131,7 @@ int dt_imageio_large_thumbnail(const char *filename, uint8_t **buffer, int32_t *
     *height = image->rows;
     *color_space = DT_COLORSPACE_SRGB; // FIXME: this assumes that embedded thumbnails are always srgb
 
-    *buffer = (uint8_t *)dt_alloc_align(64, (size_t)sizeof(uint8_t) * image->columns * image->rows * 4);
+    *buffer = (uint8_t *)dt_alloc_align(64, sizeof(uint8_t) * 4 * image->columns * image->rows);
     if(!*buffer) goto error_gm;
 
     for(uint32_t row = 0; row < image->rows; row++)
@@ -183,7 +183,7 @@ int dt_imageio_large_thumbnail(const char *filename, uint8_t **buffer, int32_t *
       break;
     }
 
-    *buffer = malloc((*width) * (*height) * 4 * sizeof(uint8_t));
+    *buffer = malloc(sizeof(uint8_t) * (*width) * (*height) * 4);
     if (*buffer == NULL) goto error_im;
 
     mret = MagickExportImagePixels(image, 0, 0, *width, *height, "RGBP", CharPixel, *buffer);
@@ -228,7 +228,7 @@ gboolean dt_imageio_has_mono_preview(const char *filename)
 {
   dt_colorspaces_color_profile_type_t color_space;
   uint8_t *tmp = NULL;
-  int32_t thumb_width, thumb_height;
+  int32_t thumb_width, thumb_height = 0;
   gboolean mono = FALSE;
 
   if(dt_imageio_large_thumbnail(filename, &tmp, &thumb_width, &thumb_height, &color_space))
@@ -325,7 +325,7 @@ void dt_imageio_flip_buffers_ui8_to_float(float *out, const uint8_t *in, const f
     for(int j = 0; j < ht; j++)
       for(int i = 0; i < wd; i++)
         for(int k = 0; k < ch; k++)
-          out[4 * ((size_t)j * wd + i) + k] = (in[(size_t)j * stride + ch * i + k] - black) * scale;
+          out[4 * ((size_t)j * wd + i) + k] = (in[(size_t)j * stride + (size_t)ch * i + k] - black) * scale;
     return;
   }
   int ii = 0, jj = 0;

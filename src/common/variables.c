@@ -16,6 +16,8 @@
     along with darktable.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "common/debug.h"
+#include "common/darktable.h"
+#include "bauhaus/bauhaus.h"
 #include "common/variables.h"
 #include "common/colorlabels.h"
 #include "common/darktable.h"
@@ -111,7 +113,8 @@ static void init_expansion(dt_variables_params_t *params, gboolean iterate)
   params->data->elevation = 0.0f;
   if(params->imgid)
   {
-    const dt_image_t *img = dt_image_cache_get(darktable.image_cache, params->imgid, 'r');
+    const dt_image_t *img = params->img ? (dt_image_t *)params->img
+                                        : dt_image_cache_get(darktable.image_cache, params->imgid, 'r');
     if(sscanf(img->exif_datetime_taken, "%d:%d:%d %d:%d:%d", &params->data->exif_tm.tm_year, &params->data->exif_tm.tm_mon,
       &params->data->exif_tm.tm_mday, &params->data->exif_tm.tm_hour, &params->data->exif_tm.tm_min, &params->data->exif_tm.tm_sec) == 6)
     {
@@ -139,7 +142,7 @@ static void init_expansion(dt_variables_params_t *params, gboolean iterate)
 
     params->data->flags = img->flags;
 
-    dt_image_cache_read_release(darktable.image_cache, img);
+    if(params->img == NULL) dt_image_cache_read_release(darktable.image_cache, img);
   }
   else if (params->data->exif_time) {
     localtime_r(&params->data->exif_time, &params->data->exif_tm);
@@ -164,6 +167,10 @@ static inline gboolean has_prefix(char **str, const char *prefix)
 
 static char *get_base_value(dt_variables_params_t *params, char **variable)
 {
+#define R(c) ((guint)(c.red * 255))
+#define G(c) ((guint)(c.green * 255))
+#define B(c) ((guint)(c.blue * 255))
+
   char *result = NULL;
   gboolean escape = TRUE;
 
@@ -388,23 +395,34 @@ static char *get_base_value(dt_variables_params_t *params, char **variable)
         const char *lb = (char *)(dt_colorlabels_to_string(GPOINTER_TO_INT(res->data)));
         if(g_strcmp0(lb, "red") == 0)
         {
-          result = dt_util_dstrcat(result, "<span foreground=\"#ee0000\">⚫ </span>");
+          const GdkRGBA c = darktable.bauhaus->colorlabels[DT_COLORLABELS_RED];
+          result = dt_util_dstrcat(result,
+                                   "<span foreground=\"#%02x%02x%02x\">⬤ </span>",
+                                   R(c), G(c), B(c));
         }
         else if(g_strcmp0(lb, "yellow") == 0)
         {
-          result = dt_util_dstrcat(result, "<span foreground=\"#eeee00\">⚫ </span>");
+          const GdkRGBA c = darktable.bauhaus->colorlabels[DT_COLORLABELS_YELLOW];
+          result = dt_util_dstrcat(result, "<span foreground=\"#%02x%02x%02X\">⬤ </span>",
+                                   R(c), G(c), B(c));
         }
         else if(g_strcmp0(lb, "green") == 0)
         {
-          result = dt_util_dstrcat(result, "<span foreground=\"#00ee00\">⚫ </span>");
+          const GdkRGBA c = darktable.bauhaus->colorlabels[DT_COLORLABELS_GREEN];
+          result = dt_util_dstrcat(result, "<span foreground=\"#%02x%02x%02X\">⬤ </span>",
+                                   R(c), G(c), B(c));
         }
         else if(g_strcmp0(lb, "blue") == 0)
         {
-          result = dt_util_dstrcat(result, "<span foreground=\"#0000ee\">⚫ </span>");
+          const GdkRGBA c = darktable.bauhaus->colorlabels[DT_COLORLABELS_BLUE];
+          result = dt_util_dstrcat(result, "<span foreground=\"#%02x%02x%02X\">⬤ </span>",
+                                   R(c), G(c), B(c));
         }
         else if(g_strcmp0(lb, "purple") == 0)
         {
-          result = dt_util_dstrcat(result, "<span foreground=\"#ee00ee\">⚫ </span>");
+          const GdkRGBA c = darktable.bauhaus->colorlabels[DT_COLORLABELS_PURPLE];
+          result = dt_util_dstrcat(result, "<span foreground=\"#%02x%02x%02X\">⬤ </span>",
+                                   R(c), G(c), B(c));
         }
       } while((res = g_list_next(res)) != NULL);
     }
@@ -422,23 +440,33 @@ static char *get_base_value(dt_variables_params_t *params, char **variable)
         const char *lb = (char *)(dt_colorlabels_to_string(GPOINTER_TO_INT(res->data)));
         if(g_strcmp0(lb, "red") == 0)
         {
-          result = dt_util_dstrcat(result, "<span foreground=\"#ee0000\">🔴 </span>");
+          const GdkRGBA c = darktable.bauhaus->colorlabels[DT_COLORLABELS_RED];
+          result = dt_util_dstrcat(result, "<span foreground=\"#%02x%02x%02x\">🔴 </span>",
+                                   R(c), G(c), B(c));
         }
         else if(g_strcmp0(lb, "yellow") == 0)
         {
-          result = dt_util_dstrcat(result, "<span foreground=\"#eeee00\">🟡 </span>");
+          const GdkRGBA c = darktable.bauhaus->colorlabels[DT_COLORLABELS_YELLOW];
+          result = dt_util_dstrcat(result, "<span foreground=\"#%02x%02x%02X\">🟡 </span>",
+                                   R(c), G(c), B(c));
         }
         else if(g_strcmp0(lb, "green") == 0)
         {
-          result = dt_util_dstrcat(result, "<span foreground=\"#00ee00\">🟢 </span>");
+          const GdkRGBA c = darktable.bauhaus->colorlabels[DT_COLORLABELS_GREEN];
+          result = dt_util_dstrcat(result, "<span foreground=\"#%02x%02x%02X\">🟢 </span>",
+                                   R(c), G(c), B(c));
         }
         else if(g_strcmp0(lb, "blue") == 0)
         {
-          result = dt_util_dstrcat(result, "<span foreground=\"#0000ee\">🔵 </span>");
+          const GdkRGBA c = darktable.bauhaus->colorlabels[DT_COLORLABELS_BLUE];
+          result = dt_util_dstrcat(result, "<span foreground=\"#%02x%02x%02X\">🔵 </span>",
+                                   R(c), G(c), B(c));
         }
         else if(g_strcmp0(lb, "purple") == 0)
         {
-          result = dt_util_dstrcat(result, "<span foreground=\"#ee00ee\">🟣 </span>");
+          const GdkRGBA c = darktable.bauhaus->colorlabels[DT_COLORLABELS_PURPLE];
+          result = dt_util_dstrcat(result, "<span foreground=\"#%02x%02x%02X\">🟣 </span>",
+                                   R(c), G(c), B(c));
         }
       } while((res = g_list_next(res)) != NULL);
     }
@@ -553,7 +581,7 @@ static char *get_base_value(dt_variables_params_t *params, char **variable)
   else if (has_prefix(variable, "TAGS"))
   {
     GList *tags_list = dt_tag_get_list_export(params->imgid, params->data->tags_flags);
-    char *tags = dt_util_glist_to_str(",", tags_list);
+    char *tags = dt_util_glist_to_str(", ", tags_list);
     g_list_free_full(tags_list, g_free);
     result = g_strdup(tags);
     g_free(tags);
@@ -587,6 +615,11 @@ static char *get_base_value(dt_variables_params_t *params, char **variable)
     return e_res;
   }
   return result;
+
+#undef R
+#undef G
+#undef B
+
 }
 
 // bash style variable manipulation. all patterns are just simple string comparisons!
@@ -870,6 +903,7 @@ static void grow_buffer(char **result, char **result_iter, size_t *result_length
 static char *expand(dt_variables_params_t *params, char **source, char extra_stop)
 {
   char *result = g_strdup("");
+  if(!*source) return result;
   char *result_iter = result;
   size_t result_length = 0;
   char *source_iter = *source;
@@ -942,6 +976,7 @@ void dt_variables_params_init(dt_variables_params_t **params)
   localtime_r(&now, &(*params)->data->time);
   (*params)->data->exif_time = 0;
   (*params)->sequence = -1;
+  (*params)->img = NULL;
 }
 
 void dt_variables_params_destroy(dt_variables_params_t *params)

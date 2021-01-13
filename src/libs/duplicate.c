@@ -261,6 +261,7 @@ void gui_post_expose(dt_lib_module_t *self, cairo_t *cri, int32_t width, int32_t
     // if cur_scale is >=2.0f (200%) we disable preview as it can hit cairo size limits without warnings
     if(cur_scale >= 2.0f)
     {
+      /* xgettext:no-c-format */
       dt_control_log(_("preview is only possible for zoom lower than 200%%..."));
       return;
     }
@@ -422,8 +423,8 @@ static void _lib_duplicate_init_callback(gpointer instance, dt_lib_module_t *sel
     GtkStyleContext *context = gtk_widget_get_style_context(hb);
     gtk_style_context_add_class(context, "dt_overlays_always");
 
-    dt_thumbnail_t *thumb
-        = dt_thumbnail_new(100, 100, imgid, -1, DT_THUMBNAIL_OVERLAYS_ALWAYS_NORMAL, FALSE, TRUE);
+    dt_thumbnail_t *thumb = dt_thumbnail_new(100, 100, imgid, -1, DT_THUMBNAIL_OVERLAYS_ALWAYS_NORMAL,
+                                             DT_THUMBNAIL_CONTAINER_LIGHTTABLE, TRUE);
     thumb->sel_mode = DT_THUMBNAIL_SEL_MODE_DISABLED;
     thumb->disable_mouseover = TRUE;
     thumb->disable_actions = TRUE;

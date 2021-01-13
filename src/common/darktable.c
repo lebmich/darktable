@@ -120,7 +120,7 @@ static int usage(const char *argv0)
   printf("  --conf <key>=<value>\n");
   printf("  --configdir <user config directory>\n");
   printf("  -d {all,cache,camctl,camsupport,control,dev,fswatch,imageio,input,\n");
-  printf("      ioporder,lighttable,lua,masks,memory,nan,opencl,params,perf,\n");
+  printf("      ioporder,lighttable,lua,masks,memory,nan,opencl,params,perf,demosaic\n");
   printf("      pwstorage,print,signal,sql,undo}\n");
   printf("  --d-signal <signal> \n");
   printf("  --d-signal-act <all,raise,connect,disconnect");
@@ -233,7 +233,7 @@ static void strip_semicolons_from_keymap(const char *path)
 
 int dt_load_from_string(const gchar *input, gboolean open_image_in_dr, gboolean *single_image)
 {
-  int id = 0;
+  int32_t id = 0;
   if(input == NULL || input[0] == '\0') return 0;
 
   char *filename = dt_util_normalize_path(input);
@@ -616,6 +616,8 @@ int dt_init(int argc, char *argv[], const gboolean init_gui, const gboolean load
           darktable.unmuted |= DT_DEBUG_SIGNAL; // signal information on console
         else if(!strcmp(argv[k + 1], "params"))
           darktable.unmuted |= DT_DEBUG_PARAMS; // iop module params checks on console
+        else if(!strcmp(argv[k + 1], "demosaic"))
+          darktable.unmuted |= DT_DEBUG_DEMOSAIC;
         else
           return usage(argv[0]);
         k++;
@@ -1445,12 +1447,12 @@ void dt_show_times_f(const dt_times_t *start, const char *prefix, const char *su
 void dt_configure_performance()
 {
   const int atom_cores = dt_get_num_atom_cores();
-  const int threads = dt_get_num_threads();
+  const size_t threads = dt_get_num_threads();
   const size_t mem = dt_get_total_memory();
   const size_t bits = CHAR_BIT * sizeof(void *);
   gchar *demosaic_quality = dt_conf_get_string("plugins/darkroom/demosaic/quality");
 
-  fprintf(stderr, "[defaults] found a %zu-bit system with %zu kb ram and %d cores (%d atom based)\n",
+  fprintf(stderr, "[defaults] found a %zu-bit system with %zu kb ram and %zu cores (%d atom based)\n",
           bits, mem, threads, atom_cores);
   if(mem >= (8lu << 20) && threads > 4 && atom_cores == 0)
   {

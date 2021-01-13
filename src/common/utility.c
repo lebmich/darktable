@@ -475,7 +475,7 @@ gchar *dt_util_latitude_str(float latitude)
 
   if(latitude < 0)
   {
-    latitude = fabs(latitude);
+    latitude = fabsf(latitude);
     c = OSD_COORDINATES_CHR_S;
   }
 
@@ -493,7 +493,7 @@ gchar *dt_util_longitude_str(float longitude)
 
   if(longitude < 0)
   {
-    longitude = fabs(longitude);
+    longitude = fabsf(longitude);
     c = OSD_COORDINATES_CHR_W;
   }
 
@@ -510,7 +510,7 @@ gchar *dt_util_elevation_str(float elevation)
 
   if(elevation < 0)
   {
-    elevation = fabs(elevation);
+    elevation = fabsf(elevation);
     c = OSD_ELEVATION_BSL;
   }
 
@@ -774,7 +774,7 @@ char *dt_read_file(const char *const filename, size_t *filesize)
   size_t end = ftell(fd);
   rewind(fd);
 
-  char *content = (char *)malloc(end * sizeof(char));
+  char *content = (char *)malloc(sizeof(char) * end);
   if(!content) return NULL;
 
   size_t count = fread(content, sizeof(char), end, fd);

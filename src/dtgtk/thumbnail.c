@@ -314,7 +314,7 @@ static void _thumb_set_image_area(dt_thumbnail_t *thumb)
     int w = 0;
     int h = 0;
     gtk_widget_get_size_request(thumb->w_bottom_eb, &w, &h);
-    image_h = thumb->height - h;
+    image_h = thumb->height - MAX(0, h);
     gtk_widget_get_size_request(thumb->w_altered, &w, &h);
     if(!thumb->zoomable)
     {
@@ -350,8 +350,62 @@ static void _thumb_set_image_area(dt_thumbnail_t *thumb)
   int wi = 0;
   int hi = 0;
   gtk_widget_get_size_request(thumb->w_image, &wi, &hi);
-  const float scale = fminf((float)image_w / wi, (float)image_h / hi);
-  if(scale < 1.0f) gtk_widget_set_size_request(thumb->w_image, wi * scale, hi * scale);
+  if(wi <= 0 || hi <= 0)
+  {
+    // we arrive here if we are inside the creation process
+    float iw = image_w;
+    float ih = image_h;
+    // we can't rely on img->aspect_ratio as the value is round to 1 decimal, so not enough accurate
+    // so we compute it from the larger available mipmap
+    float ar = 0.0f;
+    for(int k = DT_MIPMAP_7; k >= DT_MIPMAP_0; k--)
+    {
+      dt_mipmap_buffer_t tmp;
+      dt_mipmap_cache_get(darktable.mipmap_cache, &tmp, thumb->imgid, k, DT_MIPMAP_TESTLOCK, 'r');
+      if(tmp.buf)
+      {
+        const int mipw = tmp.width;
+        const int miph = tmp.height;
+        dt_mipmap_cache_release(darktable.mipmap_cache, &tmp);
+        if(mipw > 0 && miph > 0)
+        {
+          ar = (float)mipw / miph;
+          break;
+        }
+      }
+    }
+    if(ar < 0.001)
+    {
+      // let's try with the aspect_ratio store in image structure, even if it's less accurate
+      const dt_image_t *img = dt_image_cache_get(darktable.image_cache, thumb->imgid, 'r');
+      if(img)
+      {
+        ar = img->aspect_ratio;
+        dt_image_cache_read_release(darktable.image_cache, img);
+      }
+    }
+
+    if(ar > 0.001)
+    {
+      // we have a valid ratio, let's apply it
+      if(ar < 1.0)
+        iw = ih * ar;
+      else
+        ih = iw / ar;
+      // rescale to ensure it stay in thumbnails bounds
+      const float scale = fminf(1.0, fminf((float)image_w / iw, (float)image_h / ih));
+      iw *= scale;
+      ih *= scale;
+    }
+
+    gtk_widget_set_size_request(thumb->w_image, iw, ih);
+  }
+  else
+  {
+    const float scale = fminf((float)image_w / wi, (float)image_h / hi);
+    if(scale < 1.0f) gtk_widget_set_size_request(thumb->w_image, wi * scale, hi * scale);
+  }
+
   // and we set the size and margins of the imagebox
   gtk_widget_set_size_request(thumb->w_image_box, image_w, image_h);
   gtk_widget_set_margin_start(thumb->w_image_box, thumb->img_margin->left);
@@ -406,11 +460,11 @@ static gboolean _event_image_draw(GtkWidget *widget, cairo_t *cr, gpointer user_
       // get new surface with preview image
       const int buf_width = dev->preview_pipe->output_backbuf_width;
       const int buf_height = dev->preview_pipe->output_backbuf_height;
-      uint8_t *rgbbuf = g_malloc0((size_t)buf_width * buf_height * 4 * sizeof(unsigned char));
+      uint8_t *rgbbuf = g_malloc0(sizeof(unsigned char) * 4 * buf_width * buf_height);
 
       dt_pthread_mutex_t *mutex = &dev->preview_pipe->backbuf_mutex;
       dt_pthread_mutex_lock(mutex);
-      memcpy(rgbbuf, dev->preview_pipe->output_backbuf, (size_t)buf_width * buf_height * 4 * sizeof(unsigned char));
+      memcpy(rgbbuf, dev->preview_pipe->output_backbuf, sizeof(unsigned char) * 4 * buf_width * buf_height);
       dt_pthread_mutex_unlock(mutex);
 
       const int stride = cairo_format_stride_for_width(CAIRO_FORMAT_RGB24, buf_width);
@@ -473,74 +527,75 @@ static gboolean _event_image_draw(GtkWidget *widget, cairo_t *cr, gpointer user_
         cairo_surface_t *tmp_surf = thumb->img_surf;
         thumb->img_surf = img_surf;
         if(tmp_surf && cairo_surface_get_reference_count(tmp_surf) > 0) cairo_surface_destroy(tmp_surf);
-        thumb->img_width = cairo_image_surface_get_width(thumb->img_surf);
-        thumb->img_height = cairo_image_surface_get_height(thumb->img_surf);
-      }
-
-      if(thumb->img_surf)
-      {
-        // and we want to resize the imagebox to fit in the imagearea
-        const int imgbox_w = MIN(image_w, thumb->img_width / darktable.gui->ppd_thb);
-        const int imgbox_h = MIN(image_h, thumb->img_height / darktable.gui->ppd_thb);
-        // we record the imagebox size before the change
-        int hh = 0;
-        int ww = 0;
-        gtk_widget_get_size_request(thumb->w_image, &ww, &hh);
-        // and we set the new size of the imagebox
-        _thumb_set_image_size(thumb, imgbox_w, imgbox_h);
-        // the imagebox size may have been slightly sanitized, so we get it again
-        int nhi = 0;
-        int nwi = 0;
-        gtk_widget_get_size_request(thumb->w_image, &nwi, &nhi);
-
-        // panning value need to be adjusted if the imagebox size as changed
-        thumb->zoomx = thumb->zoomx + (nwi - ww) / 2.0;
-        thumb->zoomy = thumb->zoomy + (nhi - hh) / 2.0;
-        // let's sanitize and apply panning values as we are sure the zoomed image is loaded now
-        // here we have to make sure to properly align according to ppd
-        thumb->zoomx
-            = CLAMP(thumb->zoomx, (nwi * darktable.gui->ppd_thb - thumb->img_width) / darktable.gui->ppd_thb, 0);
-        thumb->zoomy
-            = CLAMP(thumb->zoomy, (nhi * darktable.gui->ppd_thb - thumb->img_height) / darktable.gui->ppd_thb, 0);
-
-        // for overlay block, we need to resize it
-        if(thumb->over == DT_THUMBNAIL_OVERLAYS_HOVER_BLOCK) _thumb_resize_overlays(thumb);
-      }
-
-      // if we don't have the right size of the image now, we reload it again
-      if(res != DT_VIEW_SURFACE_OK)
-      {
-        thumb->busy = TRUE;
-        if(!thumb->expose_again_timeout_id)
-          thumb->expose_again_timeout_id = g_timeout_add(250, _thumb_expose_again, thumb);
-      }
-
-      // if needed we compute and draw here the big rectangle to show focused areas
-      if(res == DT_VIEW_SURFACE_OK && thumb->display_focus)
-      {
-        uint8_t *full_res_thumb = NULL;
-        int32_t full_res_thumb_wd, full_res_thumb_ht;
-        dt_colorspaces_color_profile_type_t color_space;
-        char path[PATH_MAX] = { 0 };
-        gboolean from_cache = TRUE;
-        dt_image_full_path(thumb->imgid, path, sizeof(path), &from_cache);
-        if(!dt_imageio_large_thumbnail(path, &full_res_thumb, &full_res_thumb_wd, &full_res_thumb_ht, &color_space))
-        {
-          // we look for focus areas
-          dt_focus_cluster_t full_res_focus[49];
-          const int frows = 5, fcols = 5;
-          dt_focus_create_clusters(full_res_focus, frows, fcols, full_res_thumb, full_res_thumb_wd,
-                                   full_res_thumb_ht);
-          // and we draw them on the image
-          cairo_t *cri = cairo_create(thumb->img_surf);
-          dt_focus_draw_clusters(cri, cairo_image_surface_get_width(thumb->img_surf),
-                                 cairo_image_surface_get_height(thumb->img_surf), thumb->imgid, full_res_thumb_wd,
-                                 full_res_thumb_ht, full_res_focus, frows, fcols, 1.0, 0, 0);
-          cairo_destroy(cri);
-        }
-        dt_free_align(full_res_thumb);
       }
     }
+
+    if(thumb->img_surf)
+    {
+      thumb->img_width = cairo_image_surface_get_width(thumb->img_surf);
+      thumb->img_height = cairo_image_surface_get_height(thumb->img_surf);
+      // and we want to resize the imagebox to fit in the imagearea
+      const int imgbox_w = MIN(image_w, thumb->img_width / darktable.gui->ppd_thb);
+      const int imgbox_h = MIN(image_h, thumb->img_height / darktable.gui->ppd_thb);
+      // we record the imagebox size before the change
+      int hh = 0;
+      int ww = 0;
+      gtk_widget_get_size_request(thumb->w_image, &ww, &hh);
+      // and we set the new size of the imagebox
+      _thumb_set_image_size(thumb, imgbox_w, imgbox_h);
+      // the imagebox size may have been slightly sanitized, so we get it again
+      int nhi = 0;
+      int nwi = 0;
+      gtk_widget_get_size_request(thumb->w_image, &nwi, &nhi);
+
+      // panning value need to be adjusted if the imagebox size as changed
+      thumb->zoomx = thumb->zoomx + (nwi - ww) / 2.0;
+      thumb->zoomy = thumb->zoomy + (nhi - hh) / 2.0;
+      // let's sanitize and apply panning values as we are sure the zoomed image is loaded now
+      // here we have to make sure to properly align according to ppd
+      thumb->zoomx
+          = CLAMP(thumb->zoomx, (nwi * darktable.gui->ppd_thb - thumb->img_width) / darktable.gui->ppd_thb, 0);
+      thumb->zoomy
+          = CLAMP(thumb->zoomy, (nhi * darktable.gui->ppd_thb - thumb->img_height) / darktable.gui->ppd_thb, 0);
+
+      // for overlay block, we need to resize it
+      if(thumb->over == DT_THUMBNAIL_OVERLAYS_HOVER_BLOCK) _thumb_resize_overlays(thumb);
+    }
+
+    // if we don't have the right size of the image now, we reload it again
+    if(res != DT_VIEW_SURFACE_OK)
+    {
+      thumb->busy = TRUE;
+      if(!thumb->expose_again_timeout_id)
+        thumb->expose_again_timeout_id = g_timeout_add(250, _thumb_expose_again, thumb);
+    }
+
+    // if needed we compute and draw here the big rectangle to show focused areas
+    if(res == DT_VIEW_SURFACE_OK && thumb->display_focus)
+    {
+      uint8_t *full_res_thumb = NULL;
+      int32_t full_res_thumb_wd, full_res_thumb_ht;
+      dt_colorspaces_color_profile_type_t color_space;
+      char path[PATH_MAX] = { 0 };
+      gboolean from_cache = TRUE;
+      dt_image_full_path(thumb->imgid, path, sizeof(path), &from_cache);
+      if(!dt_imageio_large_thumbnail(path, &full_res_thumb, &full_res_thumb_wd, &full_res_thumb_ht, &color_space))
+      {
+        // we look for focus areas
+        dt_focus_cluster_t full_res_focus[49];
+        const int frows = 5, fcols = 5;
+        dt_focus_create_clusters(full_res_focus, frows, fcols, full_res_thumb, full_res_thumb_wd,
+                                 full_res_thumb_ht);
+        // and we draw them on the image
+        cairo_t *cri = cairo_create(thumb->img_surf);
+        dt_focus_draw_clusters(cri, cairo_image_surface_get_width(thumb->img_surf),
+                               cairo_image_surface_get_height(thumb->img_surf), thumb->imgid, full_res_thumb_wd,
+                               full_res_thumb_ht, full_res_focus, frows, fcols, 1.0, 0, 0);
+        cairo_destroy(cri);
+      }
+      dt_free_align(full_res_thumb);
+    }
+
 
     // here we are sure to have the right imagesurface
     if(res == DT_VIEW_SURFACE_OK)
@@ -1035,6 +1090,7 @@ GtkWidget *dt_thumbnail_create_widget(dt_thumbnail_t *thumb)
   // main widget (overlay)
   thumb->w_main = gtk_overlay_new();
   gtk_widget_set_name(thumb->w_main, "thumb_main");
+  gtk_widget_set_size_request(thumb->w_main, thumb->width, thumb->height);
 
   if(thumb->imgid > 0)
   {
@@ -1089,23 +1145,15 @@ GtkWidget *dt_thumbnail_create_widget(dt_thumbnail_t *thumb)
     gtk_widget_set_halign(thumb->w_image_box, GTK_ALIGN_START);
     gtk_widget_show(thumb->w_image_box);
     thumb->w_image = gtk_drawing_area_new();
+    GtkStyleContext *context = gtk_widget_get_style_context(thumb->w_image);
+    if(thumb->container == DT_THUMBNAIL_CONTAINER_PREVIEW)
+      gtk_style_context_add_class(context, "dt_preview_thumb_image");
+    else if(thumb->container == DT_THUMBNAIL_CONTAINER_CULLING)
+      gtk_style_context_add_class(context, "dt_culling_thumb_image");
     gtk_widget_set_name(thumb->w_image, "thumb_image");
-    // we pre-set the size of the imagebox with the aspect ratio so the image is already centered
-    const dt_image_t *img = dt_image_cache_get(darktable.image_cache, thumb->imgid, 'r');
-    int iw = thumb->width;
-    int ih = thumb->height;
-    if(img)
-    {
-      const float ar = img->aspect_ratio;
-      dt_image_cache_read_release(darktable.image_cache, img);
-      if(ar < 0)
-        iw = ih * ar;
-      else
-        ih = iw / ar;
-    }
-    gtk_widget_set_size_request(thumb->w_image, iw, ih);
     gtk_widget_set_valign(thumb->w_image, GTK_ALIGN_CENTER);
     gtk_widget_set_halign(thumb->w_image, GTK_ALIGN_CENTER);
+    // the size will be defined at the end, inside dt_thumbnail_resize
     gtk_widget_set_events(thumb->w_image, GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK | GDK_STRUCTURE_MASK
                                               | GDK_ENTER_NOTIFY_MASK | GDK_LEAVE_NOTIFY_MASK
                                               | GDK_POINTER_MOTION_HINT_MASK | GDK_POINTER_MOTION_MASK);
@@ -1116,7 +1164,6 @@ GtkWidget *dt_thumbnail_create_widget(dt_thumbnail_t *thumb)
     gtk_widget_show(thumb->w_image);
     gtk_overlay_add_overlay(GTK_OVERLAY(thumb->w_image_box), thumb->w_image);
     gtk_overlay_add_overlay(GTK_OVERLAY(thumb->w_main), thumb->w_image_box);
-    _thumb_retrieve_margins(thumb);
 
     // triangle to indicate current image(s) in filmstrip
     thumb->w_cursor = gtk_drawing_area_new();
@@ -1189,7 +1236,7 @@ GtkWidget *dt_thumbnail_create_widget(dt_thumbnail_t *thumb)
     }
 
     // the color labels
-    thumb->w_color = dtgtk_thumbnail_btn_new(dtgtk_cairo_paint_label_flower, thumb->colorlabels, NULL);
+    thumb->w_color = dtgtk_thumbnail_btn_new(dtgtk_cairo_paint_label_flower, thumb->colorlabels, &darktable.bauhaus->colorlabels);
     gtk_widget_set_name(thumb->w_color, "thumb_colorlabels");
     gtk_widget_set_valign(thumb->w_color, GTK_ALIGN_END);
     gtk_widget_set_halign(thumb->w_color, GTK_ALIGN_END);
@@ -1262,7 +1309,7 @@ GtkWidget *dt_thumbnail_create_widget(dt_thumbnail_t *thumb)
 }
 
 dt_thumbnail_t *dt_thumbnail_new(int width, int height, int imgid, int rowid, dt_thumbnail_overlay_t over,
-                                 gboolean zoomable, gboolean tooltip)
+                                 dt_thumbnail_container_t container, gboolean tooltip)
 {
   dt_thumbnail_t *thumb = calloc(1, sizeof(dt_thumbnail_t));
   thumb->width = width;
@@ -1270,7 +1317,8 @@ dt_thumbnail_t *dt_thumbnail_new(int width, int height, int imgid, int rowid, dt
   thumb->imgid = imgid;
   thumb->rowid = rowid;
   thumb->over = over;
-  thumb->zoomable = zoomable;
+  thumb->container = container;
+  thumb->zoomable = (container == DT_THUMBNAIL_CONTAINER_CULLING || container == DT_THUMBNAIL_CONTAINER_PREVIEW);
   thumb->zoom = 1.0f;
   thumb->overlay_timeout_duration = dt_conf_get_int("plugins/lighttable/overlay_timeout");
   thumb->tooltip = tooltip;
@@ -1586,10 +1634,47 @@ void dt_thumbnail_resize(dt_thumbnail_t *thumb, int width, int height, gboolean 
   thumb->height = height;
   gtk_widget_set_size_request(thumb->w_main, width, height);
 
-  // we change the size and margins according to the size change. This will be refined after
-  _thumb_set_image_area(thumb);
+  // for thumbtable, we need to set the size class to the image widget
+  if(thumb->container == DT_THUMBNAIL_CONTAINER_LIGHTTABLE)
+  {
+    // we get the corresponding size
+    gchar *txt = dt_conf_get_string("plugins/lighttable/thumbnail_sizes");
+    gchar **ts = g_strsplit(txt, "|", -1);
+    int i = 0;
+    while(ts[i])
+    {
+      const int s = g_ascii_strtoll(ts[i], NULL, 10);
+      if(thumb->width < s) break;
+      i++;
+    }
+    g_strfreev(ts);
+    g_free(txt);
+
+    gchar *cl = dt_util_dstrcat(NULL, "dt_thumbnails_%d", i);
+    GtkStyleContext *context = gtk_widget_get_style_context(thumb->w_image);
+    if(!gtk_style_context_has_class(context, cl))
+    {
+      // we remove all previous size class if any
+      GList *l = gtk_style_context_list_classes(context);
+      while(l)
+      {
+        gchar *ll = (gchar *)l->data;
+        if(g_str_has_prefix(ll, "dt_thumbnails_"))
+        {
+          gtk_style_context_remove_class(context, ll);
+        }
+        l = g_list_next(l);
+      }
+      g_list_free(l);
+
+      // we set the new class
+      gtk_style_context_add_class(context, cl);
+    }
+    g_free(cl);
+  }
 
   // file extension
+  _thumb_retrieve_margins(thumb);
   gtk_widget_set_margin_start(thumb->w_ext, thumb->img_margin->left);
   gtk_widget_set_margin_top(thumb->w_ext, thumb->img_margin->top);
 
@@ -1608,8 +1693,13 @@ void dt_thumbnail_resize(dt_thumbnail_t *thumb, int width, int height, gboolean 
   gtk_label_set_attributes(GTK_LABEL(thumb->w_ext), attrlist);
   pango_attr_list_unref(attrlist);
 
-  // and the overlays
-  _thumb_resize_overlays(thumb);
+  // for overlays different than block, we compute their size here, so we have valid value for th image area compute
+  if(thumb->over != DT_THUMBNAIL_OVERLAYS_HOVER_BLOCK) _thumb_resize_overlays(thumb);
+  // we change the size and margins according to the size change. This will be refined after
+  _thumb_set_image_area(thumb);
+
+  // and the overlays for the block only (the others have been done before)
+  if(thumb->over == DT_THUMBNAIL_OVERLAYS_HOVER_BLOCK) _thumb_resize_overlays(thumb);
 
   // reset surface
   dt_thumbnail_image_refresh(thumb);

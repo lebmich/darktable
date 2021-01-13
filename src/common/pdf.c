@@ -32,7 +32,6 @@
 
 #define _XOPEN_SOURCE 700
 #include <errno.h>
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -49,9 +48,8 @@
 #endif
 
 #include "pdf.h"
+#include "common/math.h"
 #include "common/utility.h"
-
-#define CLAMP_FLT(A) ((A) > (0.0f) ? ((A) < (1.0f) ? (A) : (1.0f)) : (0.0f))
 
 #define SKIP_SPACES(s)  {while(*(s) == ' ')(s)++;}
 
@@ -201,7 +199,7 @@ static void _pdf_set_offset(dt_pdf_t *pdf, int id, size_t offset)
   if(id >= pdf->n_offsets)
   {
     pdf->n_offsets = MAX(pdf->n_offsets * 2, id);
-    pdf->offsets = realloc(pdf->offsets, pdf->n_offsets * sizeof(size_t));
+    pdf->offsets = realloc(pdf->offsets, sizeof(size_t) * pdf->n_offsets);
   }
   pdf->offsets[id] = offset;
 }
@@ -419,7 +417,7 @@ dt_pdf_image_t *dt_pdf_add_image(dt_pdf_t *pdf, const unsigned char *image, int 
   );
 
   // the stream
-  stream_size = _pdf_write_stream(pdf, pdf->default_encoder, image, width * height * 3 * (bpp / 8));
+  stream_size = _pdf_write_stream(pdf, pdf->default_encoder, image, (size_t)3 * (bpp / 8) * width * height);
   if(stream_size == 0)
   {
     free(pdf_image);
@@ -876,7 +874,7 @@ int main(int argc, char *argv[])
     int width, height;
     float *image = read_ppm(argv[i + 1], &width, &height);
     if(!image) exit(1);
-    uint16_t *data = (uint16_t *)malloc(width * height * 3 * sizeof(uint16_t));
+    uint16_t *data = (uint16_t *)malloc(sizeof(uint16_t) * 3 * width * height);
     if(!data)
     {
       free(image);
@@ -887,7 +885,7 @@ int main(int argc, char *argv[])
   #pragma omp parallel for schedule(static) default(none) shared(image, data, width, height)
 #endif
     for(int i = 0; i < width * height * 3; i++)
-      data[i] = CLAMP_FLT(image[i]) * 65535;
+      data[i] = CLIP(image[i]) * 65535;
 
     images[i] = dt_pdf_add_image(pdf, (unsigned char *)data, width, height, 16, icc_id, border);
     free(image);

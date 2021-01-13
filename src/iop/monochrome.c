@@ -22,6 +22,7 @@
 #include "common/bilateral.h"
 #include "common/bilateralcl.h"
 #include "common/colorspaces.h"
+#include "common/math.h"
 #include "common/opencl.h"
 #include "control/control.h"
 #include "develop/develop.h"
@@ -35,7 +36,6 @@
 #include "gui/accelerators.h"
 #include "iop/iop_api.h"
 #include <assert.h>
-#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -171,22 +171,21 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
   dt_iop_monochrome_data_t *d = (dt_iop_monochrome_data_t *)piece->data;
   const float sigma2 = (d->size * 128.0) * (d->size * 128.0f);
 // first pass: evaluate color filter:
+  const size_t npixels = (size_t)roi_out->height * roi_out->width;
+  const float *const restrict in = (const float *)i;
+  float *const restrict out = (float *)o;
+  const float d_a = d->a;
+  const float d_b = d->b;
 #ifdef _OPENMP
 #pragma omp parallel for default(none) \
-  dt_omp_firstprivate(i, o, roi_out, sigma2) \
-  shared(d) \
+  dt_omp_firstprivate(in, out, npixels, sigma2, d_a, d_b) \
   schedule(static)
 #endif
-  for(int k = 0; k < roi_out->height; k++)
+  for(int k = 0; k < 4*npixels; k += 4)
   {
-    const float *in = ((float *)i) + (size_t)4 * k * roi_out->width;
-    float *out = ((float *)o) + (size_t)4 * k * roi_out->width;
-    for(int j = 0; j < roi_out->width; j++, in += 4, out += 4)
-    {
-      out[0] = 100.0f * color_filter(in[1], in[2], d->a, d->b, sigma2);
-      out[1] = out[2] = 0.0f;
-      out[3] = in[3];
-    }
+    out[k+0] = 100.0f * color_filter(in[k+1], in[k+2], d_a, d_b, sigma2);
+    out[k+1] = out[k+2] = 0.0f;
+    out[k+3] = in[k+3];
   }
 
   // second step: blur filter contribution:
@@ -201,23 +200,17 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
   dt_bilateral_slice(b, (float *)o, (float *)o, detail);
   dt_bilateral_free(b);
 
+  const float highlights = d->highlights;
 #ifdef _OPENMP
 #pragma omp parallel for default(none) \
-  dt_omp_firstprivate(i, o, roi_out) \
-  shared(d) \
+  dt_omp_firstprivate(in, out, npixels, highlights) \
   schedule(static)
 #endif
-  for(int k = 0; k < roi_out->height; k++)
+  for(int k = 0; k < 4*npixels; k += 4)
   {
-    const float *in = ((float *)i) + (size_t)4 * k * roi_out->width;
-    float *out = ((float *)o) + (size_t)4 * k * roi_out->width;
-    for(int j = 0; j < roi_out->width; j++, in += 4, out += 4)
-    {
-      const float tt = envelope(in[0]);
-      const float t = tt + (1.0f - tt) * (1.0f - d->highlights);
-      out[0] = (1.0f - t) * in[0]
-               + t * out[0] * (1.0f / 100.0f) * in[0]; // normalized filter * input brightness
-    }
+    const float tt = envelope(in[k]);
+    const float t = tt + (1.0f - tt) * (1.0f - highlights);
+    out[k] = (1.0f - t) * in[k] + t * out[k] * (1.0f / 100.0f) * in[k]; // normalized filter * input brightness
   }
 }
 
@@ -242,7 +235,7 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
   const float detail = -1.0f; // bilateral base layer
 
   cl_mem dev_tmp = NULL;
-  dev_tmp = dt_opencl_alloc_device(devid, roi_in->width, roi_in->height, 4 * sizeof(float));
+  dev_tmp = dt_opencl_alloc_device(devid, roi_in->width, roi_in->height, sizeof(float) * 4);
 
   dt_bilateral_cl_t *b = dt_bilateral_init_cl(devid, roi_in->width, roi_in->height, sigma_s, sigma_r);
   if(!b) goto error;
@@ -302,11 +295,14 @@ void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t
   const int height = roi_in->height;
   const int channels = piece->colors;
 
-  const size_t basebuffer = width * height * channels * sizeof(float);
+  const size_t basebuffer = sizeof(float) * channels * width * height;
+  const size_t bilat_mem = dt_bilateral_memory_use(width, height, sigma_s, sigma_r);
 
-  tiling->factor = 3.0f + (float)dt_bilateral_memory_use(width, height, sigma_s, sigma_r) / basebuffer;
+  tiling->factor = 2.0f + (float)bilat_mem / basebuffer;
+  tiling->factor_cl = 3.0f + (float)bilat_mem / basebuffer;
   tiling->maxbuf
       = fmax(1.0f, (float)dt_bilateral_singlebuffer_size(width, height, sigma_s, sigma_r) / basebuffer);
+  tiling->maxbuf_cl = tiling->maxbuf;
   tiling->overhead = 0;
   tiling->overlap = ceilf(4 * sigma_s);
   tiling->xalign = 1;

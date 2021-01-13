@@ -47,7 +47,7 @@
 
 // whenever _create_*_schema() gets changed you HAVE to bump this version and add an update path to
 // _upgrade_*_schema_step()!
-#define CURRENT_DATABASE_VERSION_LIBRARY 30
+#define CURRENT_DATABASE_VERSION_LIBRARY 32
 #define CURRENT_DATABASE_VERSION_DATA     8
 
 typedef struct dt_database_t
@@ -1675,6 +1675,61 @@ static int _upgrade_library_schema_step(dt_database_t *db, int version)
     sqlite3_exec(db->handle, "COMMIT", NULL, NULL, NULL);
     new_version = 30;
   }
+  else if(version == 30)
+  {
+    sqlite3_exec(db->handle, "BEGIN TRANSACTION", NULL, NULL, NULL);
+
+    // add second columns to speed up sorting
+    TRY_EXEC("DROP INDEX IF EXISTS `history_imgid_index`",
+        "[init] can't drop history_imgid_index\n");
+    TRY_EXEC("CREATE INDEX `history_imgid_index` ON `history` ( `imgid`, `operation` )",
+        "[init] can't recreate history_imgid_index\n");
+
+    TRY_EXEC("DROP INDEX IF EXISTS `images_filename_index`",
+        "[init] can't drop images_filename_index\n");
+    TRY_EXEC("CREATE INDEX `images_filename_index` ON `images` ( `filename`, `version` )",
+        "[init] can't recreate images_filename_index\n");
+
+    TRY_EXEC("DROP INDEX IF EXISTS `images_film_id_index`",
+        "[init] can't drop images_film_id_index\n");
+    TRY_EXEC("CREATE INDEX `images_film_id_index` ON `images` ( `film_id`, `filename` )",
+        "[init] can't recreate images_film_id_index\n");
+
+    TRY_EXEC("DROP INDEX IF EXISTS `images_group_id_index`",
+        "[init] can't drop images_group_id_index\n");
+    TRY_EXEC("CREATE INDEX `images_group_id_index` ON `images` ( `group_id`, `id` )",
+        "[init] can't recreate images_group_id_index\n");
+
+    TRY_EXEC("DROP INDEX IF EXISTS `masks_history_imgid_index`",
+        "[init] can't drop masks_history_imgid_index\n");
+    TRY_EXEC("CREATE INDEX `masks_history_imgid_index` ON `masks_history` ( `imgid`, `num` )",
+        "[init] can't recreate masks_history_imgid_index\n");
+
+    // map refinement: avoid full table scan
+    TRY_EXEC("CREATE INDEX `images_latlong_index` ON `images` ( `latitude` DESC, `longitude` DESC )",
+        "[init] can't create images_latlong_index\n");
+
+    sqlite3_exec(db->handle, "COMMIT", NULL, NULL, NULL);
+    new_version = 31;
+  }
+  else if(version == 31)
+  {
+    sqlite3_exec(db->handle, "BEGIN TRANSACTION", NULL, NULL, NULL);
+
+    // remove duplicates
+    TRY_EXEC("DELETE FROM main.meta_data WHERE rowid NOT IN (SELECT MIN(rowid) "
+             "FROM main.meta_data GROUP BY id, key)",
+             "[init] can't remove duplicates from meta_data\n");
+
+    // recreate the index with UNIQUE option
+    TRY_EXEC("DROP INDEX IF EXISTS metadata_index",
+             "[init] can't drop metadata_index\n");
+    TRY_EXEC("CREATE UNIQUE INDEX main.metadata_index ON meta_data (id, key)",
+             "[init] can't create metadata_index\n");
+
+    sqlite3_exec(db->handle, "COMMIT", NULL, NULL, NULL);
+    new_version = 32;
+  }
   else
     new_version = version; // should be the fallback so that calling code sees that we are in an infinite loop
 
@@ -1962,9 +2017,9 @@ static void _create_library_schema(dt_database_t *db)
       "import_timestamp INTEGER DEFAULT -1, change_timestamp INTEGER DEFAULT -1, "
       "export_timestamp INTEGER DEFAULT -1, print_timestamp INTEGER DEFAULT -1)",
       NULL, NULL, NULL);
-  sqlite3_exec(db->handle, "CREATE INDEX main.images_group_id_index ON images (group_id)", NULL, NULL, NULL);
-  sqlite3_exec(db->handle, "CREATE INDEX main.images_film_id_index ON images (film_id)", NULL, NULL, NULL);
-  sqlite3_exec(db->handle, "CREATE INDEX main.images_filename_index ON images (filename)", NULL, NULL, NULL);
+  sqlite3_exec(db->handle, "CREATE INDEX main.images_group_id_index ON images (group_id, id)", NULL, NULL, NULL);
+  sqlite3_exec(db->handle, "CREATE INDEX main.images_film_id_index ON images (film_id, filename)", NULL, NULL, NULL);
+  sqlite3_exec(db->handle, "CREATE INDEX main.images_filename_index ON images (filename, version)", NULL, NULL, NULL);
   sqlite3_exec(db->handle, "CREATE INDEX main.image_position_index ON images (position)", NULL, NULL, NULL);
 
   ////////////////////////////// selected_images
@@ -1976,7 +2031,7 @@ static void _create_library_schema(dt_database_t *db)
       "operation VARCHAR(256), op_params BLOB, enabled INTEGER, "
       "blendop_params BLOB, blendop_version INTEGER, multi_priority INTEGER, multi_name VARCHAR(256))",
       NULL, NULL, NULL);
-  sqlite3_exec(db->handle, "CREATE INDEX main.history_imgid_index ON history (imgid)", NULL, NULL, NULL);
+  sqlite3_exec(db->handle, "CREATE INDEX main.history_imgid_index ON history (imgid, operation)", NULL, NULL, NULL);
   ////////////////////////////// masks history
   sqlite3_exec(db->handle,
                "CREATE TABLE main.masks_history (imgid INTEGER, num INTEGER, formid INTEGER, form INTEGER, name VARCHAR(256), "
@@ -1984,7 +2039,10 @@ static void _create_library_schema(dt_database_t *db)
                NULL, NULL, NULL);
 
   sqlite3_exec(db->handle,
-      "CREATE INDEX main.masks_history_imgid_index ON masks_history (imgid)",
+      "CREATE INDEX main.masks_history_imgid_index ON masks_history (imgid, num)",
+      NULL, NULL, NULL);
+
+  sqlite3_exec(db->handle, "CREATE INDEX main.images_latlong_index ON images (latitude DESC, longitude DESC)",
       NULL, NULL, NULL);
 
   ////////////////////////////// tagged_images
@@ -1999,7 +2057,7 @@ static void _create_library_schema(dt_database_t *db)
                NULL);
   ////////////////////////////// meta_data
   sqlite3_exec(db->handle, "CREATE TABLE main.meta_data (id INTEGER, key INTEGER, value VARCHAR)", NULL, NULL, NULL);
-  sqlite3_exec(db->handle, "CREATE INDEX main.metadata_index ON meta_data (id, key)", NULL, NULL, NULL);
+  sqlite3_exec(db->handle, "CREATE UNIQUE INDEX main.metadata_index ON meta_data (id, key)", NULL, NULL, NULL);
 
   sqlite3_exec(db->handle, "CREATE TABLE main.module_order (imgid INTEGER PRIMARY KEY, version INTEGER, iop_list VARCHAR)",
                NULL, NULL, NULL);
@@ -3220,10 +3278,6 @@ void dt_database_perform_maintenance(const struct dt_database_t *db)
   if(calc_post_size >= calc_pre_size)
   {
     dt_print(DT_DEBUG_SQL, "[db maintenance] maintenance problem. if no errors logged, it should work fine next time.\n");
-  }
-  else
-  {
-
   }
 }
 #undef ERRCHECK

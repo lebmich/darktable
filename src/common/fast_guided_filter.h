@@ -97,7 +97,7 @@ __DT_CLONE_TARGETS__
 static inline float fast_clamp(const float value, const float bottom, const float top)
 {
   // vectorizable clamping between bottom and top values
-  return fmax(fmin(value, top), bottom);
+  return fmaxf(fminf(value, top), bottom);
 }
 
 
@@ -396,7 +396,7 @@ static inline void fast_surface_blur(float *const restrict image,
   // A down-scaling of 4 seems empirically safe and consistent no matter the image zoom level
   // see reference paper above for proof.
   const float scaling = 4.0f;
-  int ds_radius = (radius < 4) ? 1 : radius / scaling;
+  const int ds_radius = (radius < 4) ? 1 : radius / scaling;
 
   const size_t ds_height = height / scaling;
   const size_t ds_width = width / scaling;
