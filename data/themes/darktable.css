@@ -133,9 +133,10 @@
 @define-color lighttable_bg_font_color @grey_75;
 
 /* Lighttable and film-strip */
-@define-color thumbnail_font_color @grey_25;
+@define-color thumbnail_font_color @grey_30;
 @define-color thumbnail_bg_color @grey_50;
 @define-color thumbnail_star_bg_color @grey_35;
+@define-color thumbnail_star_hover_color @grey_80;
 @define-color thumbnail_fg_color @grey_55;
 @define-color thumbnail_bg50_color @grey_100;
 @define-color thumbnail_selected_bg_color @grey_70;
@@ -686,13 +687,33 @@ overshoot.right
 #iop-plugin-ui #section_label,
 #lib-plugin-ui #section_label
 {
-  margin: 12px 0 6px 0;
+  margin: 8px 0 6px 0;
 }
 
 #iop-plugin-ui #section_label.section_label_top,
 #lib-plugin-ui #section_label.section_label_top
 {
   margin: 2px 0 6px 0;
+}
+
+/* Control sections that can be expanded/collapsed need to be handled differently */
+
+#iop-plugin-ui .section-expander #section_label,
+#lib-plugin-ui .section-expander #section_label
+{
+  margin: 0;
+}
+
+#lib-plugin-ui .section-expander,
+#iop-plugin-ui .section-expander
+{
+  padding: 8px 0 6px 0;
+}
+
+#lib-plugin-ui .section-expander #control-button,
+#iop-plugin-ui .section-expander #control-button {
+  padding: 0;
+  margin: 0;
 }
 
 /* Special modules: image infos, navigation and search ones */
@@ -715,6 +736,74 @@ overshoot.right
 #search-box label
 {
   margin-right: 0.5em;
+}
+
+/*------------------
+  - Scope/Histogram -
+  ------------------*/
+#main-histogram buttonbox
+{
+  margin-top: 0.5em;   /* spacing between histogram buttons and top of scope */
+}
+
+#main-histogram buttonbox > *
+{
+  margin-right: 0.5em;  /* spacing between histogram button box widgets, also provides right margin for buttons */
+}
+
+/* set background color and color of scope/histogram buttons */
+#scope-type-button,
+#histogram-scale-button,
+#waveform-type-button
+{
+  color: alpha(@button_checked_fg, 0.56);
+  background-color: alpha(darker(@button_bg),0.8);
+}
+
+#scope-type-button:hover,
+#histogram-scale-button:hover,
+#waveform-type-button:hover
+{
+  color: @button_fg;
+}
+
+/* set channel buttons at inactive state */
+#red-channel-button
+{
+  background-color: alpha(@graph_red, 0.2);
+}
+
+#green-channel-button
+{
+  background-color: alpha(@graph_green, 0.2);
+}
+
+#blue-channel-button
+{
+  background-color: alpha(@graph_blue, 0.2);
+}
+
+/* set now them to active state */
+#red-channel-button:checked
+{
+  background-color: alpha(@graph_red, 0.66);
+}
+
+#green-channel-button:checked
+{
+  background-color: alpha(@graph_green, 0.66);
+}
+#blue-channel-button:checked
+{
+  background-color: alpha(@graph_blue, 0.66);
+}
+
+/* set border of all active buttons */
+#red-channel-button:checked,
+#green-channel-button:checked,
+#blue-channel-button:checked
+{
+  border-color: alpha(@button_checked_fg, 0.33);    /* just set a really tight border to better check quickly active state*/
 }
 
 /*------------------
@@ -775,33 +864,26 @@ dialog scrolledwindow
   margin: 0;
 }
 
-frame#import_metadata
+#left #lib-plugin-ui #import_metadata entry
 {
-  margin: 6px 6px 0px 6px;
-  padding: 0px 4px;
-}
-
-frame#import_metadata title *
-{
-  font-weight: bold;
-}
-
-frame#import_metadata label
-{
-  margin: 4px 3px 4px 2px;
+  margin: 1px 1px;
   padding: 0px;
 }
 
-frame#import_metadata entry
+#left #lib-plugin-ui #import_metadata checkbutton check
 {
-  margin: 2px 3px 2px 2px;
+  margin: 1px;
   padding: 0px;
 }
 
-frame#import_metadata checkbutton
+#import_metadata grid label
 {
-  margin: 0px;
-  padding: 0px;
+  margin: 0.2em 0;
+}
+
+#import_presets
+{
+  font-style: italic;
 }
 
 /* Set import from camera or card dialog window */
@@ -979,7 +1061,8 @@ menuitem check
   margin: 0 0.5em;
 }
 
-menu separator
+menu separator,
+popover separator
 {
   margin: 0.6em 2em;
   padding-bottom: 1px;
@@ -1428,7 +1511,8 @@ margin: 0 2px;
 }
 
 #modulegroups-deprecated-msg,
-#iop-plugin-deprecated
+#iop-plugin-deprecated,
+#iop-plugin-warning
 {
   background-color: #852A2A;
   padding: 0.45em;
@@ -1721,7 +1805,7 @@ progressbar progress
 /* Checkbutton check state */
 #lib-plugin-ui checkbutton check,
 #iop-plugin-ui checkbutton check,
-checkbutton:not(#import_metadata) check
+checkbutton check
 {
   margin: 5px 8px 5px 0;
 }
@@ -2482,6 +2566,15 @@ spinbutton>button
   background-color: transparent;
 }
 
+/* Make inactive stars more discrete when not hovered */
+.dt_overlays_always #thumb_star,
+.dt_overlays_always_extended #thumb_star,
+.dt_overlays_mixed #thumb_star,
+.dt_overlays_hover_block #thumb_star
+{
+  color: shade(@thumbnail_font_color, 1.4);
+}
+
 /* Set hover and selected color icons, extension name and text infos */
 .dt_overlays_always #thumb_main:hover #thumb_ext,
 .dt_overlays_always #thumb_main:selected #thumb_ext,
@@ -2535,7 +2628,7 @@ spinbutton>button
 .dt_overlays_mixed #thumb_star:active,
 .dt_overlays_hover_block #thumb_image:hover #thumb_star:active
 {
-  color: @thumbnail_selected_bg_color;
+  color: @thumbnail_font_color;
   background-color: @thumbnail_font_color;
 }
 
@@ -2547,7 +2640,7 @@ spinbutton>button
 .dt_overlays_mixed #thumb_main:hover #thumb_star:hover,
 .dt_overlays_hover_block #thumb_main:hover #thumb_star:hover
 {
-  color: @thumbnail_hover_fg_color;
+  color: @thumbnail_star_hover_color;
   background-color: @thumbnail_star_bg_color;
 }
 
@@ -2715,4 +2808,26 @@ spinbutton>button
 {
   color: @bauhaus_fg_hover;
   background-color: rgba(20, 20, 20, 0.5);
+}
+
+/* lighttable toolbox */
+#lighttable_layouts_box,
+#footer-toolbar entry
+{
+  margin-right: 0.6em;
+}
+
+#footer-toolbar #dt-toggle-button
+{
+  margin: 0 0.2em;
+}
+
+#lighttable_layouts_box #dt-toggle-button
+{
+  margin: 0 0.4em;
+}
+
+.active-menu-item * /* needed for some Pango issues not rendering synthetic bold for all OS */
+{
+    font-weight: bold;
 }

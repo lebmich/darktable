@@ -1983,7 +1983,7 @@ void dt_masks_set_edit_mode(struct dt_iop_module_t *module, dt_masks_edit_mode_t
     dt_masks_group_ungroup(grp, form);
   }
 
-  if (bd) bd->masks_shown = value;
+  if(bd) bd->masks_shown = value;
 
   dt_masks_change_form_gui(grp);
   darktable.develop->form_gui->edit_mode = value;
@@ -1992,8 +1992,9 @@ void dt_masks_set_edit_mode(struct dt_iop_module_t *module, dt_masks_edit_mode_t
   else
     dt_dev_masks_selection_change(darktable.develop, 0, FALSE);
 
-  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(bd->masks_edit),
-                               value == DT_MASKS_EDIT_OFF ? FALSE : TRUE);
+  if(bd->masks_support)
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(bd->masks_edit),
+                                 value == DT_MASKS_EDIT_OFF ? FALSE : TRUE);
 
   dt_control_queue_redraw_center();
 }
@@ -2267,10 +2268,10 @@ void dt_masks_iop_combo_populate(GtkWidget *w, struct dt_iop_module_t **m)
   int pos2 = 1;
   while(modules)
   {
-    dt_iop_module_t *m = (dt_iop_module_t *)modules->data;
-    if((m != module) && (m->flags() & IOP_FLAGS_SUPPORTS_BLENDING) && !(m->flags() & IOP_FLAGS_NO_MASKS))
+    dt_iop_module_t *other_mod = (dt_iop_module_t *)modules->data;
+    if((other_mod != module) && (other_mod->flags() & IOP_FLAGS_SUPPORTS_BLENDING) && !(other_mod->flags() & IOP_FLAGS_NO_MASKS))
     {
-      dt_masks_form_t *grp = _group_from_module(m);
+      dt_masks_form_t *grp = _group_from_module(other_mod);
       if(grp)
       {
         if(nb == 0)
@@ -2278,7 +2279,7 @@ void dt_masks_iop_combo_populate(GtkWidget *w, struct dt_iop_module_t **m)
           dt_bauhaus_combobox_add_aligned(combo, _("use same shapes as"), DT_BAUHAUS_COMBOBOX_ALIGN_LEFT);
           cids[pos++] = 0; // nothing to do
         }
-        gchar *module_label = dt_history_item_get_name(m);
+        gchar *module_label = dt_history_item_get_name(other_mod);
         dt_bauhaus_combobox_add(combo, module_label);
         g_free(module_label);
         cids[pos++] = -1 * pos2;

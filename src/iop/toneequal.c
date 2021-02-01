@@ -1,6 +1,6 @@
 /*
     This file is part of darktable,
-    Copyright (C) 2018-2020 darktable developers.
+    Copyright (C) 2018-2021 darktable developers.
 
     darktable is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -85,6 +85,7 @@
 #include "common/interpolation.h"
 #include "common/luminance_mask.h"
 #include "common/opencl.h"
+#include "common/collection.h"
 #include "control/conf.h"
 #include "control/control.h"
 #include "develop/blend.h"
@@ -1644,7 +1645,7 @@ void gui_update(struct dt_iop_module_t *self)
   dt_bauhaus_slider_set_soft(g->exposure_boost, p->exposure_boost);
 
   show_guiding_controls(self);
-  gui_cache_init(self);
+  invalidate_luminance_cache(self);
 
   dt_bauhaus_widget_set_quad_active(GTK_WIDGET(g->show_luminance_mask), g->mask_display);
 }
@@ -2365,7 +2366,7 @@ void gui_focus(struct dt_iop_module_t *self, gboolean in)
     g->mask_display = FALSE;
     dt_bauhaus_widget_set_quad_active(GTK_WIDGET(g->show_luminance_mask), FALSE);
     dt_dev_reprocess_center(self->dev);
-    dt_control_hinter_message(darktable.control, "");
+    dt_collection_hint_message(darktable.collection);
   }
   else
   {
@@ -3134,7 +3135,7 @@ void gui_init(struct dt_iop_module_t *self)
 
   g->area = GTK_DRAWING_AREA(gtk_drawing_area_new());
   gtk_box_pack_start(GTK_BOX(self->widget), GTK_WIDGET(g->area), TRUE, TRUE, 0);
-  gtk_widget_add_events(GTK_WIDGET(g->area), GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK
+  gtk_widget_add_events(GTK_WIDGET(g->area), GDK_POINTER_MOTION_MASK
                                                  | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK
                                                  | GDK_LEAVE_NOTIFY_MASK | GDK_SCROLL_MASK
                                                  | darktable.gui->scroll_mask);

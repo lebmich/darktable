@@ -1595,7 +1595,7 @@ static void import_export(GtkButton *button, gpointer data)
     dt_osx_disallow_fullscreen(chooser);
 #endif
     gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(chooser), TRUE);
-    gchar *exported_path = dt_conf_get_string("ui_last/exported_path");
+    gchar *exported_path = dt_conf_get_string("ui_last/export_path");
     if(exported_path != NULL)
     {
       gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(chooser), exported_path);
@@ -1759,7 +1759,12 @@ static void export_preset(GtkButton *button, gpointer data)
 #ifdef GDK_WINDOWING_QUARTZ
   dt_osx_disallow_fullscreen(filechooser);
 #endif
-  gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(filechooser), g_get_home_dir());
+  gchar *import_path = dt_conf_get_string("ui_last/export_path");
+  if(import_path != NULL)
+  {
+    gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(filechooser), import_path);
+    g_free(import_path);
+  }
   gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(filechooser), FALSE);
 
   if(gtk_dialog_run(GTK_DIALOG(filechooser)) == GTK_RESPONSE_ACCEPT)
@@ -1789,6 +1794,10 @@ static void export_preset(GtkButton *button, gpointer data)
     sqlite3_finalize(stmt);
 
     DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "END TRANSACTION", NULL, NULL, NULL);
+
+    gchar *folder = gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(filechooser));
+    dt_conf_set_string("ui_last/export_path", folder);
+    g_free(folder);
 
     g_free(filedir);
   }
@@ -2108,6 +2117,12 @@ static void edit_preset_response(GtkDialog *dialog, gint response_id, dt_gui_pre
 #ifdef GDK_WINDOWING_QUARTZ
     dt_osx_disallow_fullscreen(filechooser);
 #endif
+    gchar *import_path = dt_conf_get_string("ui_last/export_path");
+    if(import_path != NULL)
+    {
+      gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(filechooser), import_path);
+      g_free(import_path);
+    }
 
     // save if accepted
 
@@ -2117,6 +2132,9 @@ static void edit_preset_response(GtkDialog *dialog, gint response_id, dt_gui_pre
       dt_presets_save_to_file(g->rowid, name, filedir);
       dt_control_log(_("preset %s was successfully saved"), name);
       g_free(filedir);
+      gchar *folder = gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(filechooser));
+      dt_conf_set_string("ui_last/export_path", folder);
+      g_free(folder);
     }
 
     gtk_widget_destroy(GTK_WIDGET(filechooser));
@@ -2185,6 +2203,131 @@ static void edit_preset_response(GtkDialog *dialog, gint response_id, dt_gui_pre
 
   gtk_widget_destroy(GTK_WIDGET(dialog));
   free(g);
+}
+
+static int
+_get_grid_nb_lines(GtkGrid *grid)
+{
+  int line = 0;
+  gboolean not_empty = TRUE;
+  while(not_empty)
+  {
+    for(int i = 0; i < 2; i++)
+    {
+      not_empty = gtk_grid_get_child_at(grid, i, line) != NULL;
+      if(not_empty) break;
+    }
+    if(not_empty) line++;
+  }
+  return line;
+}
+
+static void
+_gui_preferences_bool_callback(GtkWidget *widget, gpointer data)
+{
+  dt_conf_set_bool((char *)data, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)));
+}
+
+void dt_gui_preferences_bool_reset(GtkWidget *widget)
+{
+  const char *key = gtk_widget_get_name(widget);
+  const gboolean def = dt_confgen_get_bool(key, DT_DEFAULT);
+  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), def);
+}
+
+static gboolean
+_gui_preferences_bool_reset(GtkWidget *label, GdkEventButton *event, GtkWidget *widget)
+{
+  if(event->type == GDK_2BUTTON_PRESS)
+  {
+    dt_gui_preferences_bool_reset(widget);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+void dt_gui_preferences_bool_update(GtkWidget *widget)
+{
+  const char *key = gtk_widget_get_name(widget);
+  const gboolean val = dt_conf_get_bool(key);
+  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), val);
+}
+
+GtkWidget *dt_gui_preferences_bool(GtkGrid *grid, const char *key)
+{
+  GtkWidget *w_label = gtk_label_new(_(dt_confgen_get_label(key)));
+  gtk_label_set_ellipsize(GTK_LABEL(w_label), PANGO_ELLIPSIZE_END);
+  gtk_widget_set_tooltip_text(w_label, _(dt_confgen_get_tooltip(key)));
+  gtk_widget_set_halign(w_label, GTK_ALIGN_START);
+  GtkWidget *labelev = gtk_event_box_new();
+  gtk_widget_set_hexpand(labelev, TRUE);
+  gtk_widget_add_events(labelev, GDK_BUTTON_PRESS_MASK);
+  gtk_container_add(GTK_CONTAINER(labelev), w_label);
+  GtkWidget *w = gtk_check_button_new();
+  gtk_widget_set_name(w, key);
+  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w), dt_conf_get_bool(key));
+  const int line = _get_grid_nb_lines(grid);
+  gtk_grid_attach(GTK_GRID(grid), labelev, 0, line, 1, 1);
+  gtk_grid_attach(GTK_GRID(grid), w, 1, line, 1, 1);
+  g_signal_connect(G_OBJECT(w), "clicked", G_CALLBACK(_gui_preferences_bool_callback), (gpointer)key);
+  g_signal_connect(G_OBJECT(labelev), "button-press-event", G_CALLBACK(_gui_preferences_bool_reset), (gpointer)w);
+  return w;
+}
+
+static void
+_gui_preferences_int_callback(GtkWidget *widget, gpointer data)
+{
+  dt_conf_set_int((char *)data, gtk_spin_button_get_value(GTK_SPIN_BUTTON(widget)));
+}
+
+void dt_gui_preferences_int_reset(GtkWidget *widget)
+{
+  const char *key = gtk_widget_get_name(widget);
+  const int def = dt_confgen_get_int(key, DT_DEFAULT);
+  gtk_spin_button_set_value(GTK_SPIN_BUTTON(widget), def);
+}
+
+static gboolean
+_gui_preferences_int_reset(GtkWidget *label, GdkEventButton *event, GtkWidget *widget)
+{
+  if(event->type == GDK_2BUTTON_PRESS)
+  {
+    dt_gui_preferences_int_reset(widget);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+void dt_gui_preferences_int_update(GtkWidget *widget)
+{
+  const char *key = gtk_widget_get_name(widget);
+  const int val = dt_conf_get_int(key);
+  gtk_spin_button_set_value(GTK_SPIN_BUTTON(widget), val);
+}
+
+GtkWidget *dt_gui_preferences_int(GtkGrid *grid, const char *key)
+{
+  GtkWidget *w_label = gtk_label_new(_(dt_confgen_get_label(key)));
+  gtk_label_set_ellipsize(GTK_LABEL(w_label), PANGO_ELLIPSIZE_END);
+  gtk_widget_set_tooltip_text(w_label, _(dt_confgen_get_tooltip(key)));
+  gtk_widget_set_halign(w_label, GTK_ALIGN_START);
+  GtkWidget *labelev = gtk_event_box_new();
+  gtk_widget_set_hexpand(labelev, TRUE);
+  gtk_widget_add_events(labelev, GDK_BUTTON_PRESS_MASK);
+  gtk_container_add(GTK_CONTAINER(labelev), w_label);
+  gint min = MAX(G_MININT, dt_confgen_get_int(key, DT_MIN));
+  gint max = MIN(G_MAXINT, dt_confgen_get_int(key, DT_MAX));
+  GtkWidget *w = gtk_spin_button_new_with_range(min, max, 1.0);
+  gtk_widget_set_name(w, key);
+  gtk_widget_set_hexpand(w, FALSE);
+  gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 0);
+  gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), dt_conf_get_int(key));
+  const int line = _get_grid_nb_lines(grid);
+  gtk_grid_attach(GTK_GRID(grid), labelev, 0, line, 1, 1);
+  gtk_grid_attach(GTK_GRID(grid), w, 1, line, 1, 1);
+  g_signal_connect(G_OBJECT(w), "value-changed", G_CALLBACK(_gui_preferences_int_callback), (gpointer)key);
+  g_signal_connect(G_OBJECT(labelev), "button-press-event", G_CALLBACK(_gui_preferences_int_reset), (gpointer)w);
+  return w;
 }
 
 // modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh
