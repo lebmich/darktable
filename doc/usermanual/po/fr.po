@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Darktable 1.6\n"
 "POT-Creation-Date: 2021-01-16 18:42+0100\n"
-"PO-Revision-Date: 2020-12-27 10:18+0100\n"
+"PO-Revision-Date: 2021-02-01 09:02+0100\n"
 "Last-Translator: Nicolas Auffray <nicolasauffray@aol.fr>\n"
 "Language-Team: Jean-Luc Coulon, Victor Lamoine, Michel Leblond\n"
 "Language: fr\n"
@@ -2774,7 +2774,7 @@ msgid ""
 "area and press the corresponding key again."
 msgstr ""
 "Parfois, presser <emphasis>W</emphasis> ou <emphasis>Ctrl+W</emphasis> n’a "
-"pas d’effet immédiat – dans ce cas, cliquez au centre de la zone et pressez "
+"pas d’effet immédiat – dans ce cas, cliquez sur la zone centrale et pressez "
 "de nouveau la touche correspondante."
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:2061(emphasis)
@@ -12874,11 +12874,11 @@ msgstr ""
 "correctement interpréter ses couleurs."
 
 #. <para>
-#.         Some file formats&nbsp;&ndash; namely PNG&nbsp;&ndash; do not support embedded profiles
-#.         by their specification. However, there is an established de-facto standard to embed
-#.         profiles which darktable adheres to. Beware that some applications might fail to correctly
-#.         handle those profiles and render colors incorrectly.
-#.       </para>
+#. Some file formats&nbsp;&ndash; namely PNG&nbsp;&ndash; do not support embedded profiles
+#. by their specification. However, there is an established de-facto standard to embed
+#. profiles which darktable adheres to. Beware that some applications might fail to correctly
+#. handle those profiles and render colors incorrectly.
+#. </para>
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:10181(para)
 msgid ""
 "As not all applications, e.g. image viewers, are aware of color profiles, a "
@@ -20105,21 +20105,21 @@ msgstr ""
 "couleur."
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16344(title)
-#, fuzzy
 msgid "Color calibration"
-msgstr "Balance couleur"
+msgstr "Calibration des couleurs"
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16348(secondary)
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16352(primary)
-#, fuzzy
 msgid "color calibration"
-msgstr "correction des couleurs"
+msgstr "calibration des couleurs"
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16364(entry)
 msgid ""
 "A fully-featured color-space correction, white balance adjustment and "
 "channel mixer."
 msgstr ""
+"Un système complet de correction de l'espace colorimétrique, de réglage de "
+"la balance des blancs et de mixage des canaux."
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16381(para)
 msgid ""
@@ -20132,18 +20132,32 @@ msgid ""
 "calculates a more perceptually-accurate white balance after the input color "
 "profile has been applied."
 msgstr ""
+"Pour ajuster la balance des blancs (adaptation chromatique), en travaillant "
+"en tandem avec le module <link linkend=\"whitebalance\"><emphasis>balance "
+"des blancs</emphasis></link>. Dans ce cas, le module <emphasis>balance des "
+"blancs</emphasis> effectue une première étape de balance des blancs (qui est "
+"toujours nécessaire pour que le module <link linkend=\"demosaic"
+"\"><emphasis>dématriçage</emphasis></link> fonctionne efficacement). Le "
+"module <emphasis>calibration des couleurs</emphasis> calcule ensuite une "
+"balance des blancs plus précise d'un point de vue perceptif après que le "
+"profile de couleur d'entrée a été appliqué."
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16391(para)
 msgid ""
 "As a simple RGB channel mixer, adjusting the output R, G and B channels "
 "based on the R, G and B input channels, to perform cross-talk color-grading."
 msgstr ""
+"Comme un simple mixeur de canaux RVB, il ajuste les canaux R, V et B de "
+"sortie en fonction des canaux d'entrée R, V et B, pour effectuer un "
+"étalonnage des couleurs."
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16396(para)
 msgid ""
 "To adjust the color saturation and brightness of the pixels, based on the "
 "relative strength of the R, G and B channels of each pixel."
 msgstr ""
+"Pour ajuster la saturation des couleurs et la luminosité des pixels, en "
+"fonction de la force relative des canaux R, V et B de chaque pixel."
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16400(para)
 msgid ""
@@ -20151,19 +20165,22 @@ msgid ""
 "and B channels, in a way similar to the response of black and white film to "
 "a light spectrum."
 msgstr ""
+"Pour produire une sortie en niveaux de gris basée sur les forces relatives "
+"des canaux R, V et B, d'une manière similaire à la réponse d'un film noir et "
+"blanc à un spectre lumineux."
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16377(para)
-#, fuzzy
 msgid ""
 "This simple yet powerful module can be used in the following ways: "
 "<placeholder-1/>"
 msgstr ""
-"La liste des mots-clés disponibles peut être affichée de trois manières "
-"différentes : <placeholder-1/>"
+"Ce module simple mais puissant peut être utilisé de la manière suivante : "
+"<placeholder-1/>"
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16411(title)
 msgid "White Balance in the Chromatic Adaptation Transformation (CAT) tab"
 msgstr ""
+"Balance des blancs de l'onglet CAT (Transformation d'Adaptation Chromatique)"
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16413(para)
 msgid ""
@@ -20174,6 +20191,13 @@ msgid ""
 "hand, aims only at ensuring that whites are really whites (R = G = B) and "
 "doesn’t really care about the rest of the color range."
 msgstr ""
+"L'adaptation chromatique vise à prédire l'aspect de toutes les surfaces de "
+"la scène si elles avaient été éclairées par un autre illuminant. Mais ce que "
+"nous voulons en fait prédire, c'est l'aspect qu'auraient eu ces surfaces si "
+"elles avaient été éclairées par le même illuminant que votre moniteur. La "
+"balance des blancs, en revanche, vise uniquement à s'assurer que les blancs "
+"sont vraiment blancs (R&nbsp;=&nbsp;V&nbsp;=&nbsp;B) et ne se préoccupe pas "
+"vraiment du reste de la gamme de couleurs."
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16422(para)
 msgid ""
@@ -20190,6 +20214,21 @@ msgid ""
 "the coefficients in the <emphasis>white balance</emphasis> module need to be "
 "accurate in order for this module to work in a predictable way."
 msgstr ""
+"L'adaptation chromatique est contrôlée dans l'onglet CAT (Transformation "
+"d'Adaptation Chromatique) du module <emphasis>calibration des couleurs</"
+"emphasis>. Quand il est utilisé de cette manière, le module "
+"<emphasis>balance des blancs</emphasis> n'a besoin d'effectuer qu'une "
+"opération de base en supposant un illuminant D65 (mode “référence caméra”. "
+"Le résultat de cette opération est attendue par le profil de couleur "
+"d'entrée qui a été choisi. Le reste de la balance des blancs (adaptation "
+"chromatique) est ensuite effectué par le module <emphasis>calibration des "
+"couleurs</emphasis>, au-dessus des corrections effectuées par la "
+"<emphasis>balance des blancs</emphasis> et par l'application du "
+"<emphasis>profil de couleur d'entrée</emphasis>. L'utilisation de matrices "
+"personnalisées dans le <emphasis>profil de couleur d'entrée</emphasis> est "
+"donc déconseillée et les coefficients du module <emphasis> balance des "
+"blancs </emphasis> doivent être précis pour que ce module fonctionne de "
+"manière prévisible."
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16437(para)
 msgid ""
@@ -20204,30 +20243,51 @@ msgid ""
 "balance</emphasis></link> further down the pixel pipeline for creative color "
 "grading."
 msgstr ""
+"Les modules <emphasis>calibration des couleurs</emphasis> et "
+"<emphasis>balance des blancs</emphasis> peuvent être appliqués "
+"automatiquement pour effectuer l'adaptation chromatique pour les nouveaux "
+"développements en réglant l'option <link linkend=\"processing"
+"\"><code>préferences-&gt;traitement-&gt;appliquer l'adaptation chromatique "
+"par défaut</code></link> sur “moderne”. Si vous préférez effectuer toute la "
+"balance des blancs dans le module <emphasis>balance des blancs</emphasis>, "
+"une option “originel” est également disponible. Aucune de ces options "
+"n'exclut l'utilisation d'autres modules tels que <link linkend="
+"\"color_balance\"><emphasis>balance des couleurs</emphasis></link>, plus "
+"loin dans le pipeline graphique, pour obtenir un étalonnage créatif des "
+"couleurs."
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16453(para)
 msgid ""
 "reading the RAW file's Exif data to fetch the scene white balance set by the "
 "camera,"
 msgstr ""
+"en lisant les données Exif du fichier RAW pour obtenir la balance des blancs "
+"de la scène définie par l'appareil photo,"
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16457(para)
 msgid ""
 "adjusting this setting using the camera reference white balance from the "
 "<emphasis>white balance</emphasis> module,"
 msgstr ""
+"en ajustant ce paramètre à l'aide du module <emphasis>balance des blancs</"
+"emphasis> qui utilisera la balance des blancs de l'appareil photo "
+"précédemment obtenue,"
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16461(para)
 msgid ""
 "further adjusting this setting with the input color profile in use (standard "
 "matrix only)."
 msgstr ""
+"en ajustant de plus ce paramètre avec le profil de couleur d'entrée utilisé "
+"(matrice standard uniquement)."
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16449(para)
 msgid ""
 "By default, <emphasis>color calibration</emphasis> performs chromatic "
 "adaptation by: <placeholder-1/>"
 msgstr ""
+"Par défaut, le module <emphasis>calibration des couleurs</emphasis> réalise "
+"l'adaptation chromatique : <placeholder-1/>"
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16468(para)
 msgid ""
@@ -20241,6 +20301,17 @@ msgid ""
 "the settings yourself and use your camera manufacturer's documentation to "
 "take the appropriate color correction steps."
 msgstr ""
+"Les réglages utilisés dans les modules <emphasis>balance des blancs</"
+"emphasis> et <emphasis>profil de couleur d'entrée</emphasis> (y compris les "
+"éventuels préréglages utilisateur) sont ignorés lors de la construction des "
+"réglages par défaut du module <emphasis>calibration des couleurs</emphasis>, "
+"puisque le programme ne peut pas retrouver ce qui a été fait dans ces "
+"modules. Les fichiers DNG RAW sont également ignorés car ils peuvent (mais "
+"ne doivent pas) interpoler deux profils DNG intégrés pour effectuer la "
+"balance des blancs, ce qui peut affecter les réglages. Dans ce cas, vous "
+"devrez configurer les réglages vous-même et utiliser la documentation du "
+"fabricant de votre appareil photo pour définir les étapes appropriées de "
+"correction des couleurs."
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16481(para)
 msgid ""
@@ -20250,6 +20321,12 @@ msgid ""
 "you can selectively correct different parts of the image to account for "
 "differing light sources."
 msgstr ""
+"Il convient également de noter que, contrairement au module "
+"<emphasis>balance des blancs</emphasis>, le module <emphasis>calibration des "
+"couleurs</emphasis> peut être utilisé avec des <link linkend=\"mask_manager"
+"\"><emphasis>masques</emphasis></link>. Cela signifie que vous pouvez "
+"corriger de manière sélective différentes parties de l'image pour tenir "
+"compte des différentes sources de lumière."
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16489(para)
 msgid ""
@@ -20260,11 +20337,16 @@ msgid ""
 "using a <link linkend=\"raster_mask\"><emphasis>raster mask</emphasis></"
 "link>."
 msgstr ""
+"Pour ce faire, créez une instance du module <emphasis>calibration des "
+"couleurs</emphasis> pour effectuer des ajustements globaux à l'aide d'un "
+"masque afin d'exclure les parties de l'image que vous souhaitez traiter "
+"différemment. Créez ensuite une deuxième instance du module en réutilisant "
+"le masque de la première instance (inversé) à l'aide d'un <link linkend="
+"\"raster_mask\"><emphasis>masque raster</emphasis></link>."
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16499(title)
-#, fuzzy
 msgid "CAT tab workflow"
-msgstr "flux de travail de base"
+msgstr "Le flux de travail de l'onglet CAT"
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16506(para)
 msgid ""
@@ -20276,6 +20358,14 @@ msgid ""
 "neutral. This method does not work for artificial scenes, for example those "
 "with painted surfaces."
 msgstr ""
+"Utiliser la pipette à couleurs, située à droite du rectangle coloré, pour "
+"sélectionner une couleur neutre de l'image ou, si aucune n'est disponible, "
+"sélectionner une zone de l'image entière. Dans ce cas, l'algorithme trouve "
+"la couleur moyenne dans la zone choisie et définit cette couleur comme "
+"l'illuminant. Cette méthode repose sur l'hypothèse du “monde gris”, qui "
+"prédit que la couleur moyenne d'une scène naturelle sera neutre. Cette "
+"méthode ne fonctionne pas pour les scènes artificielles, par exemple celles "
+"dont les surfaces sont peintes."
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16515(para)
 msgid ""
@@ -20312,6 +20402,10 @@ msgid ""
 "initialised from the Exif metadata of the RAW file. There are four options "
 "available in the CAT tab to set these parameters manually: <placeholder-1/>"
 msgstr ""
+"L'illuminant par défaut et l'espace colorimétrique utilisé par l'adaptation "
+"chromatique sont initialisés à partir des métadonnées Exif du fichier RAW. "
+"Quatre options sont disponibles dans l'onglet CAT pour définir ces "
+"paramètres manuellement : <placeholder-1/>"
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16543(para)
 msgid ""
@@ -20403,9 +20497,8 @@ msgid ""
 msgstr ""
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16627(title)
-#, fuzzy
 msgid "CAT tab controls"
-msgstr "onglets"
+msgstr "Les contrôles de l'onglet CAT"
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:16632(emphasis)
 #, fuzzy
@@ -26123,13 +26216,13 @@ msgstr ""
 "Dans la partie gauche vous trouvez le panneau des <emphasis>filtres de "
 "collection</emphasis> qui est décrit plus en détails dans la <xref linkend="
 "\"collect_images\"/>. Ce panneau vous laisse définir quelles images sont "
-"présentes dans le bandeau. La visibilité du bandeau  – situé dans le panneau "
+"présentes dans le bandeau. La visibilité du bandeau – situé dans le panneau "
 "du bas – est activée ou désactivée en pressant <emphasis>Ctrl+F </"
 "emphasis>(voyez la <xref linkend=\"filmstrip_overview\"/>). Dans la partie "
 "gauche vous avez aussi un panneau des <emphasis> informations de l'image</"
-"emphasis> qui affiche des données EXIF utiles de l'image située dans la "
-"partie centrale ou de l'image du bandeau située sous le pointeur de la "
-"souris (voyez la <xref linkend=\"image_information\"/>)."
+"emphasis> qui affiche des données EXIF utiles de l'image située dans la zone "
+"centrale ou de l'image du bandeau située sous le pointeur de la souris "
+"(voyez la <xref linkend=\"image_information\"/>)."
 
 #: /home/michel/darktable_ml/build/doc/usermanual/po/darktable-usermanual_profiled.xml:22968(para)
 msgid ""
