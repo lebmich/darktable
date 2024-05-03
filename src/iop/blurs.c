@@ -182,8 +182,8 @@ static inline void create_lens_kernel(float *const restrict buffer,
   const float radius = (float)(width - 1) / 2.f - 1;
 
 #ifdef _OPENMP
-#pragma omp parallel for simd default(none) dt_omp_firstprivate(width, height, buffer, n, m, k, rotation, eps, radius) \
-    schedule(simd: static) aligned(buffer:64) collapse(2)
+#pragma omp parallel for default(none) dt_omp_firstprivate(width, height, buffer, n, m, k, rotation, eps, radius) \
+    schedule(static) collapse(2)
 #endif
   for(size_t i = 0; i < height; i++)
     for(size_t j = 0; j < width; j++)
@@ -275,8 +275,8 @@ static inline void create_gauss_kernel(float *const restrict buffer,
   const float radius = (width - 1) / 2.f - 1;
 
 #ifdef _OPENMP
-#pragma omp parallel for simd default(none) dt_omp_firstprivate(width, height, buffer, radius) \
-    schedule(simd: static) aligned(buffer:64) collapse(2)
+#pragma omp parallel for default(none) dt_omp_firstprivate(width, height, buffer, radius) \
+    schedule(static) collapse(2)
 #endif
   for(size_t i = 0; i < height; i++)
     for(size_t j = 0; j < width; j++)
@@ -574,8 +574,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece,
   if(!dt_iop_have_required_input_format(4, self, piece->colors, ivoid, ovoid, roi_in, roi_out))
     return;
 
-  const float *const restrict in = __builtin_assume_aligned(ivoid, 64);
-  float *const restrict out = __builtin_assume_aligned(ovoid, 64);
+  const float *const restrict in = DT_IS_ALIGNED(ivoid);
+  float *const restrict out = DT_IS_ALIGNED(ovoid);
 
   // Init the blur kernel
   const int radius = MAX(roundf(p->radius / scale), 2);
@@ -807,7 +807,7 @@ void gui_init(dt_iop_module_t *self)
   g->img = NULL;
   g->img_width = 0.f;
 
-  g->area = GTK_DRAWING_AREA(dtgtk_drawing_area_new_with_aspect_ratio(1.f));
+  g->area = GTK_DRAWING_AREA(dtgtk_drawing_area_new_with_height(0));
   g_signal_connect(G_OBJECT(g->area), "draw", G_CALLBACK(dt_iop_tonecurve_draw), self);
   gtk_box_pack_start(GTK_BOX(self->widget), GTK_WIDGET(g->area), TRUE, TRUE, 0);
 

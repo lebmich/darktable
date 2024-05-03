@@ -203,12 +203,14 @@ static GList *_get_disabled_modules(const dt_iop_module_t *self,
     dt_iop_module_t *mod = (dt_iop_module_t *)(l->data);
 
     // if disable is actif
-    // - disable module except if gamma
-    // - disable overlay & enlargecanvas if overlay is working on
+    // - disable module except if gamma / finalscale
+    // - disable overlay, enlargecanvas if overlay is working on
     //   the current image. This is needed to avoid recursive
-    //   image references.
+    //   image references. Also disable crop, ashift which are not
+    //   wanted here (double crop / shift).
     if((disable
-        && !dt_iop_module_is(mod->so, "gamma"))
+        && !dt_iop_module_is(mod->so, "gamma")
+        && !dt_iop_module_is(mod->so, "finalscale"))
        || (is_current
            && (dt_iop_module_is(mod->so, "enlargecanvas")
                || dt_iop_module_is(mod->so, "overlay")
@@ -262,6 +264,8 @@ static void _setup_overlay(dt_iop_module_t *self,
     return;
   }
 
+  dt_develop_t *dev = self->dev;
+
   gboolean image_exists = dt_image_exists(imgid);
 
   // The overlay image could have been removed from collection and
@@ -273,7 +277,7 @@ static void _setup_overlay(dt_iop_module_t *self,
     {
       image_exists = TRUE;
       p->imgid = new_imgid;
-      dt_dev_add_history_item(darktable.develop, self, TRUE);
+      dt_dev_add_history_item(dev, self, TRUE);
       if(g)
         gtk_widget_queue_draw(GTK_WIDGET(g->area));
     }
@@ -288,8 +292,6 @@ static void _setup_overlay(dt_iop_module_t *self,
 
   if(image_exists)
   {
-    dt_develop_t *dev = self->dev;
-
     const size_t width  = dev->image_storage.width;
     const size_t height = dev->image_storage.width;
 
@@ -306,7 +308,7 @@ static void _setup_overlay(dt_iop_module_t *self,
                  -1,
                  &buf, NULL, &bw, &bh,
                  NULL, NULL,
-                 -1, disabled_modules);
+                 -1, disabled_modules, piece->pipe->devid, TRUE);
 
     uint8_t *old_buf = *pbuf;
 
@@ -315,6 +317,8 @@ static void _setup_overlay(dt_iop_module_t *self,
     p->buf_height    = bh;
     data->buf_width  = bw;
     data->buf_height = bh;
+
+    dt_dev_add_history_item(dev, self, TRUE);
 
     *pbuf = buf;
     dt_free_align(old_buf);
@@ -957,8 +961,8 @@ static void _drag_and_drop_received(GtkWidget *widget,
       if(dt_overlay_used_by(imgid, self->dev->image_storage.id))
       {
         dt_control_log
-          (_("cannot use image %d as overlay"
-             " as it is using itself the current image as overlay"),
+          (_("cannot use image %d as an overlay"
+             " as it is using the current image as an overlay itself"),
            imgid);
       }
       else
@@ -968,8 +972,10 @@ static void _drag_and_drop_received(GtkWidget *widget,
           dt_overlay_remove(self->dev->image_storage.id, p->imgid);
 
         // and record the new one
-        p->imgid = imgid;
-        p->hash = 0;
+        p->imgid         = imgid;
+        p->hash          = 0;
+        p->buf_width     = 0;
+        p->buf_height    = 0;
         _clear_cache_entry(self, index);
 
         dt_overlay_record(self->dev->image_storage.id, p->imgid);
@@ -1029,7 +1035,7 @@ void gui_init(struct dt_iop_module_t *self)
   gtk_grid_set_column_spacing(grid, DT_PIXEL_APPLY_DPI(10));
   int line = 0;
 
-  g->area = GTK_DRAWING_AREA(dtgtk_drawing_area_new_with_aspect_ratio(1.0));
+  g->area = GTK_DRAWING_AREA(dtgtk_drawing_area_new_with_height(0));
   g_signal_connect(G_OBJECT(g->area), "draw", G_CALLBACK(_draw_thumb), self);
   gtk_widget_set_size_request(GTK_WIDGET(g->area), 150, 150);
   gtk_grid_attach(grid, GTK_WIDGET(g->area), 0, line++, 1, 2);

@@ -1,6 +1,6 @@
 /*
     This file is part of darktable,
-    Copyright (C) 2013-2023 darktable developers.
+    Copyright (C) 2013-2024 darktable developers.
 
     darktable is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -218,10 +218,10 @@ void dt_masks_blur(float *const restrict src,
   const size_t w3 = 3*width;
   const size_t w4 = 4*width;
 #ifdef _OPENMP
-  #pragma omp parallel for simd default(none) \
+  #pragma omp parallel for default(none) \
   dt_omp_firstprivate(blurmat, src, out, clip, gain) \
   dt_omp_sharedconst(width, height, w1, w2, w3, w4) \
-  schedule(simd:static) aligned(src, out : 64)
+  schedule(static)
  #endif
   for(size_t row = 4; row < height - 4; row++)
   {
@@ -253,17 +253,17 @@ gboolean dt_masks_calc_scharr_mask(dt_dev_detail_mask_t *details,
 #endif
   for(size_t idx =0; idx < msize; idx++)
   {
-    const float val = CLIP(src[4 * idx] / wb[0])
-                    + CLIP(src[4 * idx + 1] / wb[1])
-                    + CLIP(src[4 * idx + 2] / wb[2]);
+    const float val = fmaxf(0.0f, src[4 * idx] / wb[0])
+                    + fmaxf(0.0f, src[4 * idx + 1] / wb[1])
+                    + fmaxf(0.0f, src[4 * idx + 2] / wb[2]);
     // add a gamma. sqrtf should make noise variance the same for all image
     tmp[idx] = sqrtf(val / 3.0f);
   }
 
 #ifdef _OPENMP
-  #pragma omp parallel for simd default(none) \
+  #pragma omp parallel for default(none) \
   dt_omp_firstprivate(mask, tmp, width, height) \
-  schedule(simd:static) aligned(mask, tmp : 64)
+  schedule(static)
  #endif
   for(size_t row = 1; row < height - 1; row++)
   {
@@ -271,7 +271,7 @@ gboolean dt_masks_calc_scharr_mask(dt_dev_detail_mask_t *details,
     {
       const size_t idx = row * width + col;
       const float gradient_magnitude = scharr_gradient(&tmp[idx], width);
-      mask[idx] = gradient_magnitude / 16.0f;
+      mask[idx] = fminf(1.0f, fmaxf(0.0f, gradient_magnitude / 16.0f));
     }
   }
   dt_masks_extend_border(mask, width, height, 1);

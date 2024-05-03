@@ -274,7 +274,8 @@ void dt_dev_invalidate_preview(dt_develop_t *dev)
 void dt_dev_process_image_job(dt_develop_t *dev,
                               dt_dev_viewport_t *port,
                               dt_dev_pixelpipe_t *pipe,
-                              dt_signal_t signal)
+                              dt_signal_t signal,
+                              const int devid)
 {
   if(dev->full.pipe->loading && pipe != dev->full.pipe)
   {
@@ -431,7 +432,7 @@ restart:
     dt_dev_pixelpipe_module_enabled(port->pipe, mod, FALSE);
   }
 
-  if(dt_dev_pixelpipe_process(pipe, dev, x, y, wd, ht, scale))
+  if(dt_dev_pixelpipe_process(pipe, dev, x, y, wd, ht, scale, devid))
   {
     // interrupted because image changed?
     if(dev->image_force_reload || pipe->loading || pipe->input_changed)
@@ -1355,7 +1356,6 @@ static void _cleanup_history(const dt_imgid_t imgid)
 void dt_dev_write_history_ext(dt_develop_t *dev,
                               const dt_imgid_t imgid)
 {
-  sqlite3_stmt *stmt;
   dt_lock_image(imgid);
 
   _cleanup_history(imgid);
@@ -1379,13 +1379,7 @@ void dt_dev_write_history_ext(dt_develop_t *dev,
   }
 
   // update history end
-  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
-                              "UPDATE main.images SET history_end = ?1 WHERE id = ?2", -1,
-                              &stmt, NULL);
-  DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, dev->history_end);
-  DT_DEBUG_SQLITE3_BIND_INT(stmt, 2, imgid);
-  sqlite3_step(stmt);
-  sqlite3_finalize(stmt);
+  dt_image_set_history_end(imgid, dev->history_end);
 
   // write the current iop-order-list for this image
 
@@ -3469,14 +3463,16 @@ void dt_dev_image(const dt_imgid_t imgid,
                   float *zoom_x,
                   float *zoom_y,
                   const int snapshot_id,
-                  GList *module_filter_out)
+                  GList *module_filter_out,
+                  const int devid,
+                  const gboolean finalscale)
 {
   dt_develop_t dev;
   dt_dev_init(&dev, TRUE);
   dev.gui_attached = FALSE;
   dt_dev_pixelpipe_t *pipe = dev.full.pipe;
 
-  pipe->type |= DT_DEV_PIXELPIPE_IMAGE;
+  pipe->type |= DT_DEV_PIXELPIPE_IMAGE | (finalscale ? DT_DEV_PIXELPIPE_IMAGE_FINAL : 0);
   // load image and set history_end
 
   dev.snapshot_id = snapshot_id;
@@ -3502,7 +3498,7 @@ void dt_dev_image(const dt_imgid_t imgid,
 
   dev.module_filter_out = module_filter_out;
 
-  dt_dev_process_image_job(&dev, &dev.full, pipe, -1);
+  dt_dev_process_image_job(&dev, &dev.full, pipe, -1, devid);
 
   // record resulting image and dimensions
 

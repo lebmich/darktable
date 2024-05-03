@@ -1,6 +1,6 @@
 /*
     This file is part of darktable,
-    Copyright (C) 2009-2023 darktable developers.
+    Copyright (C) 2009-2024 darktable developers.
 
     darktable is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -1152,11 +1152,13 @@ gboolean dt_iop_so_is_hidden(dt_iop_module_so_t *module)
   if(!(module->flags() & IOP_FLAGS_HIDDEN))
   {
     if(!module->gui_init)
-      g_debug("Module '%s' is not hidden and lacks implementation of gui_init()...",
-              module->op);
+      dt_print(DT_DEBUG_ALWAYS,
+               "Module '%s' is not hidden and lacks implementation of gui_init()...",
+               module->op);
     else if(!module->gui_cleanup)
-      g_debug("Module '%s' is not hidden and lacks implementation of gui_cleanup()...",
-              module->op);
+      dt_print(DT_DEBUG_ALWAYS,
+               "Module '%s' is not hidden and lacks implementation of gui_cleanup()...",
+               module->op);
     else
       is_hidden = FALSE;
   }
@@ -2186,7 +2188,12 @@ static void _gui_reset_callback(GtkButton *button,
   dt_iop_connect_accels_multi(module->so);
 }
 
-static void _presets_popup_callback(GtkButton *button, dt_iop_module_t *module)
+void dt_iop_reset_callback(GtkButton *button, GdkEventButton *event, dt_iop_module_t *module)
+{
+  _gui_reset_callback(button, event, module);
+}
+
+void dt_presets_popup_callback(GtkButton *button, dt_iop_module_t *module)
 {
   const gboolean disabled = !module->default_enabled && module->hide_enable_button;
   if(disabled) return;
@@ -2404,7 +2411,7 @@ static gboolean _iop_plugin_body_button_press(GtkWidget *w,
   }
   else if(e->button == 3)
   {
-    _presets_popup_callback(NULL, module);
+    dt_presets_popup_callback(NULL, module);
 
     return TRUE;
   }
@@ -2452,7 +2459,7 @@ static gboolean _iop_plugin_header_button_press(GtkWidget *w,
   }
   else if(e->button == 3)
   {
-    _presets_popup_callback(NULL, module);
+    dt_presets_popup_callback(NULL, module);
 
     return TRUE;
   }
@@ -2943,7 +2950,7 @@ void dt_iop_gui_set_expander(dt_iop_module_t *module)
     gtk_widget_set_tooltip_text(GTK_WIDGET(hw[IOP_MODULE_PRESETS]),
                                 _("presets\nright-click to apply on new instance"));
   g_signal_connect(G_OBJECT(hw[IOP_MODULE_PRESETS]), "clicked",
-                   G_CALLBACK(_presets_popup_callback), module);
+                   G_CALLBACK(dt_presets_popup_callback), module);
   g_signal_connect(G_OBJECT(hw[IOP_MODULE_PRESETS]), "enter-notify-event",
                    G_CALLBACK(_header_enter_notify_callback),
                    GINT_TO_POINTER(DT_ACTION_ELEMENT_PRESETS));
@@ -3738,7 +3745,8 @@ static float _action_process(gpointer target,
       switch(effect)
       {
       case DT_ACTION_EFFECT_ACTIVATE:
-        if(module->presets_button) _presets_popup_callback(NULL, module);
+        if(module->presets_button)
+          dt_presets_popup_callback(NULL, module);
         break;
       case DT_ACTION_EFFECT_NEXT:
         move_size *= -1;

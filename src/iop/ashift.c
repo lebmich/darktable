@@ -1150,10 +1150,10 @@ void distort_mask(struct dt_iop_module_t *self,
       pin[1] -= roi_in->y;
 
       // get output values by interpolation from input image
-      _out[i] = dt_interpolation_compute_sample(interpolation, in,
+      _out[i] = MIN(1.0f, dt_interpolation_compute_sample(interpolation, in,
                                                 pin[0], pin[1],
                                                 roi_in->width, roi_in->height,
-                                                1, roi_in->width);
+                                                1, roi_in->width));
     }
   }
 }
@@ -4345,7 +4345,7 @@ void gui_post_expose(dt_iop_module_t *self,
   {
     cairo_save(cr);
     cairo_set_line_width(cr, DT_PIXEL_APPLY_DPI(2.0) * lwidth);
-    dt_draw_set_color_overlay(cr, FALSE, 1.0);
+    dt_draw_set_color_overlay(cr, TRUE, 1.0);
 
     const float bzx = g->straighten_x, bzy = g->straighten_y;
     cairo_arc(cr, bzx * wd, bzy * ht,
@@ -4358,7 +4358,9 @@ void gui_post_expose(dt_iop_module_t *self,
     cairo_line_to(cr, pzx * wd, pzy * ht);
     cairo_stroke(cr);
 
-    float angle = _calculate_straightening(self, pzx, pzy, bzx, bzy, wd, ht, zoom_scale);
+    const float angle =
+      _calculate_straightening(self, pzx, pzy, bzx, bzy, wd, ht, zoom_scale);
+
     if(angle != 0.0f)
     {
       PangoRectangle ink;

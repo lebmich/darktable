@@ -1,6 +1,6 @@
 /*
     This file is part of darktable,
-    Copyright (C) 2009-2023 darktable developers.
+    Copyright (C) 2009-2024 darktable developers.
 
     darktable is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -258,16 +258,11 @@ int dt_imageio_png_read_profile(const char *filename, uint8_t **out, dt_colorspa
   dt_imageio_png_t image;
   png_charp name;
   png_uint_32 proflen = 0;
-
-#if PNG_LIBPNG_VER >= 10500 /* 1.5.0 */
   png_bytep profile;
-#else
-  png_charp profile;
-#endif
 
   if(!(filename && *filename)) return 0;
 
-  if(read_header(filename, &image) != 0) return DT_IMAGEIO_LOAD_FAILED;
+  if(read_header(filename, &image) != 0) return 0;
 
   /* TODO: also add check for known cICP chunk read support once added to libpng */
 #ifdef PNG_STORE_UNKNOWN_CHUNKS_SUPPORTED

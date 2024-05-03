@@ -55,7 +55,7 @@ jobs:
           - "debian:trixie-slim"
         compiler:
           - { compiler: GNU13,  CC: gcc-13,   CXX: g++-13,     packages: gcc-13 g++-13 }
-          - { compiler: LLVM15, CC: clang-15, CXX: clang++-15, packages: clang-15 libomp-15-dev llvm-15-dev libc++-15-dev libc++abi1-15 lld-15 clang-tools-15 mlir-15-tools libmlir-15-dev}
+          - { compiler: LLVM16, CC: clang-16, CXX: clang++-16, packages: clang-16 libomp-16-dev llvm-16-dev libc++-16-dev libc++abi1-16 lld-16 clang-tools-16 mlir-16-tools libmlir-16-dev}
         btype:
           - Release
         target:
@@ -76,7 +76,7 @@ jobs:
       SRC_DIR: ${{ github.workspace }}/src
       BUILD_DIR: ${{ github.workspace }}/build
       INSTALL_PREFIX: ${{ github.workspace }}/install
-      ECO: -DTEMPORAIRLY_ALLOW_OLD_TOOCHAIN=ON
+      ECO: -DTEMPORAIRLY_ALLOW_OLD_TOOCHAIN=OFF
       CMAKE_BUILD_TYPE: ${{ matrix.btype }}
       GENERATOR: ${{ matrix.generator }}
       TARGET: ${{ matrix.target }}
@@ -205,10 +205,9 @@ jobs:
         run: |
           ${INSTALL_PREFIX}/bin/darktable --version || true
           ${INSTALL_PREFIX}/bin/darktable-cli \
-                 --width 2048 --height 2048 \
+                 --width 1000 --height 1000 \
                  --hq true --apply-custom-presets false \
-                 "${SRC_DIR}/src/tests/integration/images/mire1.cr2" \
-                 "${SRC_DIR}/src/tests/integration/0000-nop/nop.xmp" \
+                 "${SRC_DIR}/data/pixmaps/256x256/darktable.png" \
                  output.png \
                  --core --disable-opencl --conf host_memory_limit=8192 \
                  --conf worker_threads=4 -t 4 \
@@ -316,11 +315,9 @@ jobs:
           $(cygpath ${INSTALL_PREFIX})/bin/darktable-cli.exe --version || true
           echo "Testing RUN!"
           $(cygpath ${INSTALL_PREFIX})/bin/darktable-cli.exe \
-                 --verbose \
-                 --width 2048 --height 2048 \
+                 --width 1000 --height 1000 \
                  --hq true --apply-custom-presets false \
-                 $(cygpath ${SRC_DIR})/src/tests/integration/images/mire1.cr2 \
-                 $(cygpath ${SRC_DIR})/src/tests/integration/0000-nop/nop.xmp \
+                 $(cygpath ${SRC_DIR})/data/pixmaps/256x256/darktable.png \
                  output.png \
                  --core --disable-opencl --conf host_memory_limit=8192 \
                  --conf worker_threads=4 -t 4 \
@@ -335,7 +332,7 @@ jobs:
       matrix:
         build:
           - { os: macos-13,    xcode: 15.2,   deployment: 13.5 } # LLVM16, x86_64
-          - { os: macos-14,    xcode: 15.2,   deployment: 14.0 } # LLVM16, arm64
+          - { os: macos-14,    xcode: 15.3,   deployment: 14.0 } # LLVM16, arm64
         compiler:
           - { compiler: XCode,   CC: cc, CXX: c++ }
         btype: [ Release ]
@@ -381,10 +378,9 @@ jobs:
         run: |
           ${INSTALL_PREFIX}/bin/darktable --version || true
           ${INSTALL_PREFIX}/bin/darktable-cli \
-                 --width 2048 --height 2048 \
+                 --width 1000 --height 1000 \
                  --hq true --apply-custom-presets false \
-                 "${SRC_DIR}/src/tests/integration/images/mire1.cr2" \
-                 "${SRC_DIR}/src/tests/integration/0000-nop/nop.xmp" \
+                 "${SRC_DIR}/data/pixmaps/256x256/darktable.png" \
                  output.png \
                  --core --disable-opencl --conf host_memory_limit=8192 \
                  --conf worker_threads=4 -t 4 \

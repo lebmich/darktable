@@ -1,6 +1,6 @@
 /*
     This file is part of darktable,
-    Copyright (C) 2009-2023 darktable developers.
+    Copyright (C) 2009-2024 darktable developers.
 
     darktable is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -29,9 +29,11 @@
 #include "common/action.h"
 #include "control/settings.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+#if defined(__aarch64__)
+#include <arm_neon.h>
+#endif
+
+G_BEGIN_DECLS
 
 /** region of interest, needed by pixelpipe.h */
 typedef struct dt_iop_roi_t
@@ -40,9 +42,7 @@ typedef struct dt_iop_roi_t
   float scale;
 } dt_iop_roi_t;
 
-#ifdef __cplusplus
-} // extern "C"
-#endif /* __cplusplus */
+G_END_DECLS
 
 #include "develop/pixelpipe.h"
 #include "dtgtk/togglebutton.h"
@@ -57,9 +57,7 @@ typedef struct dt_iop_roi_t
 #endif
 #endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+G_BEGIN_DECLS
 
 struct dt_develop_t;
 struct dt_dev_pixelpipe_t;
@@ -595,6 +593,8 @@ static inline void copy_pixel_nontemporal(
 {
 #if defined(__SSE__)
   _mm_stream_ps(out, *((__m128*)in));
+#elif defined(__aarch64__)
+  vst1q_f32(out, *((float32x4_t *)in));
 #elif (__clang__+0 > 7) && (__clang__+0 < 10)
   for_each_channel(k,aligned(in,out:16)) __builtin_nontemporal_store(in[k],out[k]);
 #else
@@ -671,9 +671,7 @@ static inline void dt_mm_restore_flush_zero(const unsigned int mode)
 
 #endif /* __SSE2__ */
 
-#ifdef __cplusplus
-} // extern "C"
-#endif /* __cplusplus */
+G_END_DECLS
 
 // clang-format off
 // modelines: These editor modelines have been set for all relevant files by tools/update_modelines.py
